@@ -31,7 +31,7 @@ class Config:
         # Parsear categorías como lista
         categories_str = os.getenv(
             'EXPENSE_CATEGORIES',
-            'Supermercado,Salidas,Juntadas,Suplementos,Compras'
+            'Supermercado,Salidas,Combustible,Mascotas,Regalos,Delivery,Servicios,Compras,Juntadas,Salud,Deporte,Vianda'
         )
         self.expense_categories = [cat.strip() for cat in categories_str.split(',')]
 
