@@ -163,7 +163,7 @@ async def handle_text_message(user_message, update: Update, context: ContextType
         error_msg = (
             "❌ No pude entender tu mensaje.\n\n"
             "💡 Intenta ser más específico:\n"
-            "• 'Compré [cosa] por $[monto]'\n"
+            "• 'Compré [cosa] por [monto] AED'\n"
             "• 'Gasté [monto] en [categoría]'"
         )
         await update.message.reply_text(error_msg)
@@ -194,7 +194,7 @@ def format_confirmation_message_list(expenses: list) -> str:
         e = expenses[0]
         return (
             f"✅ Gasto registrado correctamente\n\n"
-            f"💰 Monto: ${e['monto']:.2f}\n"
+            f"💰 Monto: AED {e['monto']:.2f}\n"
             f"📂 Categoría: {e['categoria']}\n"
             f"📅 Fecha: {e['fecha']}\n"
             f"📝 Descripción: {e['descripcion']}\n\n"
@@ -203,7 +203,7 @@ def format_confirmation_message_list(expenses: list) -> str:
 
     lines = [f"✅ {len(expenses)} gastos registrados en Google Sheets ✨\n"]
     for e in expenses:
-        lines.append(f"• ${e['monto']:.2f} — {e['categoria']} ({e['fecha']}): {e['descripcion']}")
+        lines.append(f"• AED {e['monto']:.2f} — {e['categoria']} ({e['fecha']}): {e['descripcion']}")
     return '\n'.join(lines)
 
 
