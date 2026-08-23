@@ -1,4 +1,5 @@
 """Cliente para interactuar con Google Sheets."""
+import json
 import logging
 import time
 from functools import wraps
@@ -43,7 +44,8 @@ def rate_limit(max_calls: int, period: int):
 class SheetsClient:
     """Cliente para escribir gastos en Google Sheets."""
 
-    def __init__(self, credentials_path: str, spreadsheet_id: str, sheet_name: str):
+    def __init__(self, spreadsheet_id: str, sheet_name: str,
+                 credentials_path: str = '', credentials_json: str = ''):
         """
         Inicializa el cliente de Google Sheets.
 
@@ -61,19 +63,20 @@ class SheetsClient:
         try:
             logger.info("Autenticando con Google Sheets...")
 
-            # Definir los scopes necesarios
             scopes = [
                 'https://www.googleapis.com/auth/spreadsheets',
                 'https://www.googleapis.com/auth/drive'
             ]
 
-            # Cargar credenciales
-            credentials = Credentials.from_service_account_file(
-                credentials_path,
-                scopes=scopes
-            )
+            if credentials_json:
+                credentials = Credentials.from_service_account_info(
+                    json.loads(credentials_json), scopes=scopes
+                )
+            else:
+                credentials = Credentials.from_service_account_file(
+                    credentials_path, scopes=scopes
+                )
 
-            # Crear cliente de gspread
             self.client = gspread.authorize(credentials)
 
             # Abrir el spreadsheet

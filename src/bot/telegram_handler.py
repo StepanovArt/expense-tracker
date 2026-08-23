@@ -1,6 +1,5 @@
 """Handlers del bot de Telegram."""
 import logging
-import os
 from telegram import Update
 from telegram.ext import ContextTypes
 from src.llm.prompt_builder import build_prompt
@@ -79,44 +78,12 @@ Los gastos se registran automáticamente en tu planilla de Google Sheets."""
 
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handler unificado de mensaje, en caso de ser texto realiza validaciones, y en caso de ser un audio intenta primero transcribirlo utilizando
-    whisper de OpenAI (https://openai.com/index/whisper/)
-    """
-    message = update.message
+    """Handler para mensajes de texto con gastos."""
     user_id = update.effective_user.id
-
     logger.info(f"Mensaje recibido del usuario {user_id}")
 
     await update.message.reply_text("⏳ Procesando tu mensaje, puede tardar un momento...")
-
-    # 1. ¿Es un audio o nota de voz?
-    if message.voice or message.audio:
-        # Obtener el archivo de mayor calidad
-        audio_file = await (message.voice or message.audio).get_file()
-
-        # Descarga temporal
-        file_path = f"temp_audio_{user_id}.ogg"
-        await audio_file.download_to_drive(file_path)
-
-        whisper_model = context.bot_data['whisper_model']
-
-        try:
-            # 2· Transcribir con whisper
-            result = whisper_model.transcribe(file_path, language="es", fp16=False)
-            user_message = result["text"]
-            logger.info(f"Audio transcrito: {user_message}")
-        finally:
-            # Limpiar archivo temporal
-            if os.path.exists(file_path):
-                os.remove(file_path)
-    elif message.text:
-            user_message = message.text
-    else:
-        logger.warning("Formato del mensaje del usuario {user_id} no soportado")
-        return
-
-    await handle_text_message(user_message, update, context)
+    await handle_text_message(update.message.text, update, context)
 
 
 async def handle_text_message(user_message, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

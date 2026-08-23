@@ -24,7 +24,16 @@ class Config:
         # Gemini
         self.gemini_api_key = os.getenv('GEMINI_API_KEY', '')
         self.gemini_model = os.getenv('GEMINI_MODEL', 'gemini-2.0-flash')
-        self.google_credentials_path = self._get_required_env('GOOGLE_CREDENTIALS_PATH')
+
+        # Credenciales Google: JSON inline (Railway) o ruta a archivo (local/Pi)
+        self.google_credentials_json = os.getenv('GOOGLE_CREDENTIALS_JSON', '')
+        self.google_credentials_path = os.getenv('GOOGLE_CREDENTIALS_PATH', '')
+        if not self.google_credentials_json and not self.google_credentials_path:
+            raise ValueError(
+                "Se requiere GOOGLE_CREDENTIALS_JSON (contenido del JSON) "
+                "o GOOGLE_CREDENTIALS_PATH (ruta al archivo)"
+            )
+
         self.spreadsheet_id = self._get_required_env('SPREADSHEET_ID')
         self.sheet_name = os.getenv('SHEET_NAME', 'Gastos')
 

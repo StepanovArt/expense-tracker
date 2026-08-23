@@ -3,7 +3,6 @@
 import logging
 import signal
 import sys
-import whisper
 from telegram import Update
 from telegram.ext import Application, CommandHandler, MessageHandler, filters
 from src.config import Config
@@ -39,14 +38,11 @@ def main():
             f"Inicializando cliente Google Sheets (spreadsheet: {config.spreadsheet_id})..."
         )
         sheets_client = SheetsClient(
-            credentials_path=config.google_credentials_path,
             spreadsheet_id=config.spreadsheet_id,
             sheet_name=config.sheet_name,
+            credentials_path=config.google_credentials_path,
+            credentials_json=config.google_credentials_json,
         )
-
-        logger.info ("Configurando modelo de whisper para trascripción de audio...")
-        model_transcribe = whisper.load_model("small")
-        
 
         logger.info("Configurando bot de Telegram...")
 
@@ -56,7 +52,6 @@ def main():
         # Almacenar clientes y configuración en bot_data para acceso en handlers
         application.bot_data["llm_connector"] = llm_client
         application.bot_data["sheets_client"] = sheets_client
-        application.bot_data["whisper_model"] = model_transcribe
         application.bot_data["categories"] = config.expense_categories
 
         # Agregar handlers — solo para el usuario autorizado
@@ -64,10 +59,7 @@ def main():
         application.add_handler(CommandHandler("start", start_command, filters=user_filter))
         application.add_handler(CommandHandler("help", help_command, filters=user_filter))
         application.add_handler(
-            MessageHandler(
-                (filters.TEXT | filters.VOICE | filters.AUDIO) & ~filters.COMMAND & user_filter,
-                handle_message,
-            )
+            MessageHandler(filters.TEXT & ~filters.COMMAND & user_filter, handle_message)
         )
         
         # Manejador de errores global
