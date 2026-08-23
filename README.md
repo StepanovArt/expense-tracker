@@ -11,9 +11,11 @@ El foco es reducir fricción: registrar el gasto en el momento en que ocurre, us
 ## 🌟 Características
 
 - 🤖 **Procesa lenguaje natural**: Envía mensajes como "Compré pan por $500 ayer" y el bot entiende
+- 📦 **Múltiples gastos en un mensaje**: "productos 80 y taxi 25" se registra como dos filas separadas; si una es inválida, las demás se guardan igual (partial success)
 - 🎙️ **Soporte de audio**: Envía notas de voz o audios; el bot los transcribe automáticamente con Whisper (modelo open-source)
 - 📊 **Registro automático**: Guarda directamente en Google Sheets con descripción generada por el LLM
 - 🧠 **LLM configurable**: Ollama local (privado, sin costos de API) o Gemini (API de Google)
+- 🔐 **Acceso restringido**: Solo el usuario autorizado puede usar el bot (configurado vía `ALLOWED_USER_ID`); sin esta variable el bot no arranca
 - ⚙️ **Configurable**: Todo parametrizable vía variables de entorno
 - 🍓 **Optimizado para Raspberry Pi**: Bajo consumo de recursos
 
@@ -51,19 +53,18 @@ El modelo recibe:
 - El mensaje original
 - El listado explícito de categorías válidas
 
-Y debe devolver un JSON estructurado con:
+Y debe devolver un **array JSON** con uno o varios objetos, cada uno con:
 
 - Monto
 - Descripción
 - Categoría (forzada a una del listado)
 - Fecha (si está implícita)
 
-Esto permite mantener consistencia en la planilla sin exigirle al usuario recordar comandos o categorías exactas.
+Si un mensaje contiene varios gastos, el LLM los devuelve como múltiples elementos del array y se registran en una sola llamada a la API de Sheets. Esto permite mantener consistencia en la planilla sin exigirle al usuario recordar comandos o categorías exactas.
 
 ## ⚠️ Limitaciones
 
 - La precisión depende del modelo y del prompt.
-- No maneja múltiples gastos en un mismo mensaje.
 - No existe interfaz de corrección automática ante errores del modelo.
 
 ## 🏗️ Arquitectura
@@ -263,6 +264,10 @@ Completa las siguientes variables:
 # Token del bot de Telegram (de @BotFather)
 TELEGRAM_BOT_TOKEN=123456789:ABCdefGHIjklMNOpqrsTUVwxyz
 
+# Tu Telegram user ID — obtenlo enviando /start a @userinfobot
+# Sin esto el bot no arranca (fail closed)
+ALLOWED_USER_ID=123456789
+
 # Conector LLM: ollama | gemini
 LLM_CONNECTOR=ollama
 
@@ -311,12 +316,20 @@ python run.py
 
 ### Ejemplos de Mensajes
 
+**Un gasto:**
 ```
 Compré pan por $500 ayer
 Gasté 1200 en suplementos
 Salida con amigos, 3500 pesos anteayer
 Super hoy 2500
 Juntada el lunes pasado, 1800
+```
+
+**Varios gastos en un solo mensaje:**
+```
+productos 80 y taxi 25
+super 2500 y delivery 1200 ayer
+nafta 45k, juntada 3500 y farmacia 800
 ```
 
 También podés enviar una nota de voz diciendo lo mismo y el bot la transcribirá antes de procesarla.
@@ -326,6 +339,8 @@ El bot entiende:
 - ✅ Referencias temporales (ayer, anteayer, hoy, etc.)
 - ✅ Diferentes formas de expresar gastos
 - ✅ Mensajes de texto y notas de voz / audios
+- ✅ Uno o múltiples gastos en el mismo mensaje
+- ✅ Éxito parcial: si un gasto del mensaje es inválido, los demás se registran igual
 
 ## 🐳 Deployment en Raspberry Pi
 
@@ -478,6 +493,7 @@ telegram-bot-gastos-llm/
   chmod 600 .env
   chmod 600 /ruta/a/credentials.json
   ```
+- ✅ **Control de acceso obligatorio**: configura `ALLOWED_USER_ID` con tu Telegram user ID. El bot rechaza cualquier mensaje de otros usuarios a nivel de filtro (no llega al handler). Sin esta variable el bot no arranca. Tu ID lo encontrás enviando `/start` a [@userinfobot](https://t.me/userinfobot).
 
 ## 📝 Licencia
 
