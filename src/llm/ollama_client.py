@@ -25,7 +25,7 @@ class OllamaClient(LLMConnector):
         self.timeout = timeout
         logger.info(f"Cliente Ollama inicializado con modelo: {model}")
 
-    def generate(self, prompt: str) -> dict:
+    def generate(self, prompt: str) -> list:
         """
         Genera una respuesta usando Ollama y extrae el JSON.
 
@@ -60,35 +60,41 @@ class OllamaClient(LLMConnector):
             logger.error(f"Error al conectar con Ollama: {e}")
             raise OllamaConnectionError(f"No se pudo conectar con Ollama: {e}")
 
-    def _extract_json_from_text(self, text: str) -> dict:
+    def _extract_json_from_text(self, text: str) -> list:
         """
-        Extrae JSON de un texto, incluso si viene rodeado de texto adicional.
+        Extrae un array JSON de un texto, incluso si viene rodeado de texto adicional.
+        Si el modelo devuelve un objeto en lugar de un array, lo envuelve en una lista.
 
         El modelo puede devolver:
-        - Solo JSON: {"monto": 100, ...}
-        - JSON con texto: "Aquí está: {"monto": 100, ...}"
-        - JSON con saltos de línea
+        - Array JSON: [{"monto": 100, ...}]
+        - Array con múltiples gastos: [{"monto": 100, ...}, {"monto": 50, ...}]
+        - Objeto (fallback): {"monto": 100, ...}
 
         Args:
             text: Texto que contiene JSON
 
         Returns:
-            Diccionario parseado del JSON
+            Lista de diccionarios con los datos de los gastos
 
         Raises:
             OllamaInvalidJSONError: Si no se encuentra o no se puede parsear el JSON
         """
-        # Buscar patrón de JSON en el texto
-        json_match = re.search(r'\{.*\}', text, re.DOTALL)
+        array_match = re.search(r'\[.*\]', text, re.DOTALL)
+        if array_match:
+            try:
+                return json.loads(array_match.group())
+            except json.JSONDecodeError as e:
+                logger.error(f"Error al parsear JSON array: {e}")
+                raise OllamaInvalidJSONError(f"JSON inválido: {e}")
 
-        if not json_match:
+        # Fallback: el modelo devolvió un objeto en lugar de array
+        obj_match = re.search(r'\{.*\}', text, re.DOTALL)
+        if not obj_match:
             logger.error(f"No se encontró JSON en la respuesta: {text}")
             raise OllamaInvalidJSONError("No se encontró JSON en la respuesta del modelo")
 
-        json_str = json_match.group()
-
         try:
-            return json.loads(json_str)
+            return [json.loads(obj_match.group())]
         except json.JSONDecodeError as e:
             logger.error(f"Error al parsear JSON: {e}")
             raise OllamaInvalidJSONError(f"JSON inválido: {e}")

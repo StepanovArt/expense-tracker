@@ -6,7 +6,7 @@ from telegram.ext import ContextTypes
 from src.llm.prompt_builder import build_prompt
 from src.llm.base import LLMConnector
 from src.storage.sheets_client import SheetsClient
-from src.utils.validators import validate_expense_data
+from src.utils.validators import validate_expense_data, validate_expense_list
 from src.utils.exceptions import (
     OllamaConnectionError,
     OllamaInvalidJSONError,
@@ -151,33 +151,38 @@ async def handle_text_message(user_message, update: Update, context: ContextType
         # 1. Construir prompt con fecha actual
         prompt = build_prompt(user_message, categories)
 
-        # 2. Generar respuesta con Ollama
-        expense_data = llm_connector.generate(prompt)
-        logger.debug(f"Datos extraídos: {expense_data}")
+        # 2. Generar respuesta del LLM (ahora devuelve lista)
+        expenses = llm_connector.generate(prompt)
+        logger.debug(f"Datos extraídos: {expenses}")
 
-        # 3. Validar datos
-        is_valid, error_message = validate_expense_data(expense_data, categories)
-        if not is_valid:
-            logger.warning(f"Datos inválidos: {error_message}")
+        # 3. Validar cada gasto individualmente
+        validation_results = validate_expense_list(expenses, categories)
+        valid_expenses = [item for item, err in validation_results if item is not None]
+        errors = [err for _, err in validation_results if err is not None]
+
+        if not valid_expenses:
+            error_detail = '\n'.join(f"• {e}" for e in errors)
+            logger.warning(f"Todos los gastos inválidos: {errors}")
             await update.message.reply_text(
-                f"❌ {error_message}\n\n"
+                f"❌ No se pudo registrar ningún gasto:\n{error_detail}\n\n"
                 f"💡 Intenta reformular tu mensaje con monto y categoría claros."
             )
             return
 
-        # 4. Guardar en Google Sheets
-        sheets_client.append_expense(
-            fecha=expense_data['fecha'],
-            descripcion=expense_data['descripcion'],
-            categoria=expense_data['categoria'],
-            monto=expense_data['monto']
-        )
+        # 4. Guardar en Google Sheets en un solo llamado API
+        sheets_client.append_expenses(valid_expenses)
 
-        # 5. Confirmar al usuario
-        confirmation_message = format_confirmation_message(expense_data, user_message)
+        # 5. Confirmar al usuario (con advertencia de parciales si aplica)
+        confirmation_message = format_confirmation_message_list(valid_expenses)
+        if errors:
+            error_detail = '\n'.join(f"• {e}" for e in errors)
+            confirmation_message += f"\n\n⚠️ No se registraron:\n{error_detail}"
+
         await update.message.reply_text(confirmation_message)
 
-        logger.info(f"Gasto registrado exitosamente para usuario {user_id}")
+        logger.info(
+            f"Gastos para usuario {user_id}: {len(valid_expenses)} registrados, {len(errors)} inválidos"
+        )
 
     except (OllamaConnectionError, GeminiConnectionError):
         error_msg = "❌ Error de conexión con el LLM.\n🔧 El servicio no está disponible. Intenta más tarde."
@@ -205,25 +210,31 @@ async def handle_text_message(user_message, update: Update, context: ContextType
         logger.exception(f"Error inesperado: {e}")
 
 
-def format_confirmation_message(expense_data: dict, original_message: str) -> str:
+def format_confirmation_message_list(expenses: list) -> str:
     """
-    Formatea el mensaje de confirmación con emojis.
+    Formatea el mensaje de confirmación para uno o varios gastos.
 
     Args:
-        expense_data: Datos del gasto (monto, categoria, fecha)
-        original_message: Mensaje original del usuario
+        expenses: Lista de dicts con monto, categoria, fecha, descripcion
 
     Returns:
         Mensaje de confirmación formateado
     """
-    return f"""✅ Gasto registrado correctamente
+    if len(expenses) == 1:
+        e = expenses[0]
+        return (
+            f"✅ Gasto registrado correctamente\n\n"
+            f"💰 Monto: ${e['monto']:.2f}\n"
+            f"📂 Categoría: {e['categoria']}\n"
+            f"📅 Fecha: {e['fecha']}\n"
+            f"📝 Descripción: {e['descripcion']}\n\n"
+            f"Registro completado en Google Sheets ✨"
+        )
 
-💰 Monto: ${expense_data['monto']:.2f}
-📂 Categoría: {expense_data['categoria']}
-📅 Fecha: {expense_data['fecha']}
-📝 Descripción: {expense_data['descripcion']}
-
-Registro completado en Google Sheets ✨"""
+    lines = [f"✅ {len(expenses)} gastos registrados en Google Sheets ✨\n"]
+    for e in expenses:
+        lines.append(f"• ${e['monto']:.2f} — {e['categoria']} ({e['fecha']}): {e['descripcion']}")
+    return '\n'.join(lines)
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:

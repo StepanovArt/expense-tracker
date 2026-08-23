@@ -120,3 +120,26 @@ class SheetsClient:
         except Exception as e:
             logger.error(f"Error al escribir en Google Sheets: {e}")
             raise GoogleSheetsError(f"Error al registrar gasto en Sheets: {e}")
+
+    @rate_limit(max_calls=50, period=60)
+    def append_expenses(self, expenses: list) -> None:
+        """
+        Agrega múltiples gastos en un solo llamado a la API usando append_rows.
+
+        Args:
+            expenses: Lista de dicts con keys fecha, descripcion, categoria, monto
+
+        Raises:
+            GoogleSheetsError: Si hay un error al escribir en Sheets
+        """
+        try:
+            logger.info(f"Registrando {len(expenses)} gastos en lote")
+            rows = [
+                [e['fecha'], e['descripcion'], e['categoria'], e['monto']]
+                for e in expenses
+            ]
+            self.worksheet.append_rows(rows, value_input_option='USER_ENTERED')
+            logger.info(f"{len(expenses)} gastos registrados exitosamente en Google Sheets")
+        except Exception as e:
+            logger.error(f"Error al escribir en Google Sheets: {e}")
+            raise GoogleSheetsError(f"Error al registrar gastos en Sheets: {e}")

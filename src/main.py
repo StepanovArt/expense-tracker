@@ -59,11 +59,15 @@ def main():
         application.bot_data["whisper_model"] = model_transcribe
         application.bot_data["categories"] = config.expense_categories
 
-        # Agregar handlers
-        application.add_handler(CommandHandler("start", start_command))
-        application.add_handler(CommandHandler("help", help_command))
+        # Agregar handlers — solo para el usuario autorizado
+        user_filter = filters.User(user_id=[config.allowed_user_id])
+        application.add_handler(CommandHandler("start", start_command, filters=user_filter))
+        application.add_handler(CommandHandler("help", help_command, filters=user_filter))
         application.add_handler(
-            MessageHandler((filters.TEXT | filters.VOICE | filters.AUDIO) & ~filters.COMMAND, handle_message)
+            MessageHandler(
+                (filters.TEXT | filters.VOICE | filters.AUDIO) & ~filters.COMMAND & user_filter,
+                handle_message,
+            )
         )
         
         # Manejador de errores global

@@ -38,6 +38,18 @@ class Config:
         self.log_level = os.getenv('LOG_LEVEL', 'INFO')
         self.log_dir = os.getenv('LOG_DIR', 'logs')
 
+        # Control de acceso — fail closed: sin ALLOWED_USER_ID el bot no arranca
+        allowed_user_id_str = os.getenv('ALLOWED_USER_ID', '').strip()
+        if not allowed_user_id_str:
+            raise ValueError(
+                "ALLOWED_USER_ID es requerido. El bot no iniciará sin control de acceso. "
+                "Configúralo en .env con tu Telegram user ID (obtenlo con @userinfobot)."
+            )
+        try:
+            self.allowed_user_id = int(allowed_user_id_str)
+        except ValueError:
+            raise ValueError(f"ALLOWED_USER_ID debe ser un número entero, recibido: {allowed_user_id_str!r}")
+
     def _get_required_env(self, key: str) -> str:
         """
         Obtiene una variable de entorno requerida.

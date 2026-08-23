@@ -1,6 +1,6 @@
 """Validadores para datos de gastos."""
 from datetime import datetime
-from typing import Tuple
+from typing import List, Tuple
 
 
 def validate_expense_data(data: dict, valid_categories: list) -> Tuple[bool, str]:
@@ -42,3 +42,26 @@ def validate_expense_data(data: dict, valid_categories: list) -> Tuple[bool, str
         return False, "La fecha debe tener formato YYYY-MM-DD"
 
     return True, ""
+
+
+def validate_expense_list(data: list, valid_categories: list) -> List[Tuple[dict, str]]:
+    """
+    Valida cada gasto de una lista de forma independiente.
+
+    Args:
+        data: Lista de diccionarios con datos de gastos
+        valid_categories: Lista de categorías válidas
+
+    Returns:
+        Lista de tuplas (gasto_valido_o_None, error_o_None).
+        Si el elemento es válido: (dict, None).
+        Si es inválido: (None, mensaje_de_error).
+    """
+    results = []
+    for i, item in enumerate(data):
+        is_valid, error = validate_expense_data(item, valid_categories)
+        if is_valid:
+            results.append((item, None))
+        else:
+            results.append((None, f"gasto #{i + 1}: {error}"))
+    return results

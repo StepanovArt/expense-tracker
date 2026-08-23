@@ -26,7 +26,7 @@ class GeminiClient(LLMConnector):
         self.model_name = model
         logger.info(f"Cliente Gemini inicializado con modelo: {model}")
 
-    def generate(self, prompt: str) -> dict:
+    def generate(self, prompt: str) -> list:
         """
         Genera una respuesta usando Gemini y extrae el JSON.
 
@@ -51,29 +51,36 @@ class GeminiClient(LLMConnector):
             logger.error(f"Error al conectar con Gemini: {e}")
             raise GeminiConnectionError(f"No se pudo conectar con Gemini: {e}")
 
-    def _extract_json_from_text(self, text: str) -> dict:
+    def _extract_json_from_text(self, text: str) -> list:
         """
-        Extrae JSON de un texto, incluso si viene rodeado de texto adicional.
+        Extrae un array JSON de un texto, incluso si viene rodeado de texto adicional.
+        Si el modelo devuelve un objeto en lugar de un array, lo envuelve en una lista.
 
         Args:
             text: Texto que contiene JSON
 
         Returns:
-            Diccionario parseado del JSON
+            Lista de diccionarios con los datos de los gastos
 
         Raises:
             GeminiInvalidJSONError: Si no se encuentra o no se puede parsear el JSON
         """
-        json_match = re.search(r'\{.*\}', text, re.DOTALL)
+        array_match = re.search(r'\[.*\]', text, re.DOTALL)
+        if array_match:
+            try:
+                return json.loads(array_match.group())
+            except json.JSONDecodeError as e:
+                logger.error(f"Error al parsear JSON array: {e}")
+                raise GeminiInvalidJSONError(f"JSON inválido: {e}")
 
-        if not json_match:
+        # Fallback: el modelo devolvió un objeto en lugar de array
+        obj_match = re.search(r'\{.*\}', text, re.DOTALL)
+        if not obj_match:
             logger.error(f"No se encontró JSON en la respuesta: {text}")
             raise GeminiInvalidJSONError("No se encontró JSON en la respuesta del modelo")
 
-        json_str = json_match.group()
-
         try:
-            return json.loads(json_str)
+            return [json.loads(obj_match.group())]
         except json.JSONDecodeError as e:
             logger.error(f"Error al parsear JSON: {e}")
             raise GeminiInvalidJSONError(f"JSON inválido: {e}")
