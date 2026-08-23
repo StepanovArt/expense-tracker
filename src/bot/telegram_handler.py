@@ -29,15 +29,17 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
     """
     welcome_message = """¡Hola! 👋
 
-Soy tu asistente de gastos personal. Envíame tus gastos en lenguaje natural y los registraré automáticamente en tu planilla.
+Soy tu asistente personal de gastos. Escríbeme tus gastos como quieras y los registro automáticamente en tu planilla.
 
 📝 Ejemplos:
-• "Compré pan por $500 ayer"
-• "Gasté 1200 en suplementos"
-• "Salida con amigos, 3500 pesos"
-• "Super hoy 2500"
+• "super 45"
+• "taxi 12 ayer"
+• "spotify y chatgpt 30 en total"
+• "cena con amigos 80 el viernes"
 
-Usa /help para ver más información."""
+Podés mandar varios gastos en un solo mensaje, cada uno se registra por separado.
+
+/help — categorías disponibles"""
 
     await update.message.reply_text(welcome_message)
     logger.info(f"Comando /start recibido de usuario {update.effective_user.id}")
@@ -55,23 +57,24 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     categories = context.bot_data.get('categories', [])
     categories_str = '\n• '.join(categories)
 
-    help_message = f"""ℹ️ Ayuda - Bot de Gastos
+    help_message = f"""ℹ️ Ayuda
 
-📂 Categorías disponibles:
+📂 Categorías:
 • {categories_str}
 
-📝 Cómo usar:
-Simplemente envíame un mensaje describiendo tu gasto. Por ejemplo:
-• "Compré X por $Y"
-• "Gasté Z en [categoría]"
-• "Salida ayer, 1500 pesos"
+🏠 Vivienda — alquiler, expensas
+🛒 Comida — supermercado, verdulería, fiambrería
+🛍 Compras — ropa, tecnología, Amazon, hogar
+📱 Suscripciones — ChatGPT, Spotify, iCloud, apps
+🎬 Ocio — cine, bares, eventos, juegos
+📚 Educación — universidad, cursos, libros, exámenes
+💈 Personal — peluquería, cuidado personal, regalos
+📦 Otros — solo si no entra en ninguna categoría
 
-El bot entenderá automáticamente:
-✅ El monto del gasto
-✅ La categoría
-✅ La fecha (si no la especificas, asume hoy)
-
-Los gastos se registran automáticamente en tu planilla de Google Sheets."""
+💡 Consejos:
+• No hace falta escribir la categoría, el bot la infiere
+• Si no ponés fecha, asume hoy
+• Varios gastos en un mensaje → cada uno en su fila"""
 
     await update.message.reply_text(help_message)
     logger.info(f"Comando /help recibido de usuario {update.effective_user.id}")
