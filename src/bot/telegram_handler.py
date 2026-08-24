@@ -53,23 +53,22 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         update: Update de Telegram
         context: Contexto del bot
     """
-    # Obtener categorías de la configuración almacenada en context
     categories = context.bot_data.get('categories', [])
-    categories_str = '\n• '.join(categories)
+    category_descriptions = context.bot_data.get('category_descriptions', {})
+
+    if category_descriptions:
+        categories_lines = '\n'.join(
+            f'• {cat} — {category_descriptions[cat]}' if cat in category_descriptions else f'• {cat}'
+            for cat in categories
+        )
+    else:
+        categories_lines = '\n• '.join(categories)
+        categories_lines = '• ' + categories_lines
 
     help_message = f"""ℹ️ Ayuda
 
 📂 Categorías:
-• {categories_str}
-
-🏠 Vivienda — alquiler, expensas
-🛒 Comida — supermercado, verdulería, fiambrería
-🛍 Compras — ropa, tecnología, Amazon, hogar
-📱 Suscripciones — ChatGPT, Spotify, iCloud, apps
-🎬 Ocio — cine, bares, eventos, juegos
-📚 Educación — universidad, cursos, libros, exámenes
-💈 Personal — peluquería, cuidado personal, regalos
-📦 Otros — solo si no entra en ninguna categoría
+{categories_lines}
 
 💡 Consejos:
 • No hace falta escribir la categoría, el bot la infiere
@@ -113,13 +112,14 @@ async def handle_text_message(user_message, update: Update, context: ContextType
     llm_connector: LLMConnector = context.bot_data['llm_connector']
     sheets_client: SheetsClient = context.bot_data['sheets_client']
     categories = context.bot_data['categories']
+    category_descriptions = context.bot_data.get('category_descriptions', {})
 
     try:
         # Enviar indicador de "escribiendo..."
         await update.message.chat.send_action(action="typing")
 
         # 1. Construir prompt con fecha actual
-        prompt = build_prompt(user_message, categories)
+        prompt = build_prompt(user_message, categories, category_descriptions)
 
         # 2. Generar respuesta del LLM (ahora devuelve lista)
         expenses = llm_connector.generate(prompt)

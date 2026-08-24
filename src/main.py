@@ -53,6 +53,7 @@ def main():
         application.bot_data["llm_connector"] = llm_client
         application.bot_data["sheets_client"] = sheets_client
         application.bot_data["categories"] = config.expense_categories
+        application.bot_data["category_descriptions"] = config.expense_category_descriptions
 
         # Agregar handlers — solo para el usuario autorizado
         user_filter = filters.User(user_id=[config.allowed_user_id])

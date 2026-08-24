@@ -1,5 +1,6 @@
 """Configuración del bot cargada desde variables de entorno."""
 import os
+import json
 from dotenv import load_dotenv
 
 
@@ -43,6 +44,16 @@ class Config:
             'Supermercado,Salidas,Combustible,Mascotas,Regalos,Delivery,Servicios,Compras,Juntadas,Salud,Deporte,Vianda'
         )
         self.expense_categories = [cat.strip() for cat in categories_str.split(',')]
+
+        # Descripciones de categorías para guiar al LLM (JSON: {"Categoria": "ejemplos..."})
+        category_descriptions_str = os.getenv('EXPENSE_CATEGORY_DESCRIPTIONS', '')
+        if category_descriptions_str:
+            try:
+                self.expense_category_descriptions: dict = json.loads(category_descriptions_str)
+            except json.JSONDecodeError:
+                self.expense_category_descriptions = {}
+        else:
+            self.expense_category_descriptions = {}
 
         self.log_level = os.getenv('LOG_LEVEL', 'INFO')
         self.log_dir = os.getenv('LOG_DIR', 'logs')
