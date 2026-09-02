@@ -142,8 +142,8 @@ async def handle_text_message(user_message, update: Update, context: ContextType
         # 4. Guardar en Google Sheets en un solo llamado API
         sheets_client.append_expenses(valid_expenses)
 
-        # 5. Obtener estadísticas del mes y semana actual
-        monthly_stats = sheets_client.get_spending_stats()
+        # 5. Obtener estadísticas (desde caché, sin llamada extra a Sheets)
+        monthly_stats = _update_stats_cache(context.bot_data, sheets_client, valid_expenses)
 
         # 6. Confirmar al usuario (con advertencia de parciales si aplica)
         confirmation_message = format_confirmation_message_list(valid_expenses)
@@ -183,6 +183,56 @@ async def handle_text_message(user_message, update: Update, context: ContextType
         error_msg = "❌ Ocurrió un error inesperado.\n🔧 Intenta nuevamente más tarde."
         await update.message.reply_text(error_msg)
         logger.exception(f"Error inesperado: {e}")
+
+
+def _update_stats_cache(bot_data: dict, sheets_client, new_expenses: list) -> dict:
+    """
+    Возвращает актуальную статистику, обновляя кэш инкрементально.
+
+    Полный перечит Sheets делается только при первом запросе или при смене
+    месяца/недели. В остальных случаях просто прибавляем новые расходы к кэшу.
+    """
+    from datetime import date, timedelta
+    today = date.today()
+    current_month = today.strftime('%Y-%m')
+    week_start = today - timedelta(days=today.weekday())
+
+    cache = bot_data.get('stats_cache')
+    cache_stale = (
+        cache is None
+        or cache.get('cached_month') != current_month
+        or cache.get('cached_week_start') != week_start
+    )
+
+    if cache_stale:
+        stats = sheets_client.get_spending_stats()
+        bot_data['stats_cache'] = {
+            **stats,
+            'cached_month': current_month,
+            'cached_week_start': week_start,
+        }
+        cache = bot_data['stats_cache']
+    else:
+        week_end = week_start + timedelta(days=6)
+        for e in new_expenses:
+            try:
+                expense_date = date.fromisoformat(e['fecha'])
+                monto = float(e['monto'])
+            except (ValueError, TypeError):
+                continue
+            if not e['fecha'].startswith(current_month):
+                continue
+            cache['month_total'] = cache.get('month_total', 0.0) + monto
+            cat = e['categoria']
+            cache['by_category'][cat] = cache['by_category'].get(cat, 0.0) + monto
+            if week_start <= expense_date <= week_end:
+                cache['week_total'] = cache.get('week_total', 0.0) + monto
+
+    return {
+        'month_total': cache['month_total'],
+        'week_total': cache['week_total'],
+        'by_category': dict(cache['by_category']),
+    }
 
 
 def format_confirmation_message_list(expenses: list) -> str:
