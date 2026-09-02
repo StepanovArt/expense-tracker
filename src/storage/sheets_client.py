@@ -124,6 +124,56 @@ class SheetsClient:
             logger.error(f"Error al escribir en Google Sheets: {e}")
             raise GoogleSheetsError(f"Error al registrar gasto en Sheets: {e}")
 
+    def get_spending_stats(self) -> dict:
+        """
+        Lee todas las filas de la hoja y devuelve estadísticas para el mes
+        y la semana calendario actual (lunes–domingo), en un solo recorrido.
+
+        Returns:
+            Dict con:
+              'month_total'   float
+              'week_total'    float
+              'by_category'   dict categoria -> float  (totales del mes)
+        """
+        from datetime import date, timedelta
+        today = date.today()
+        current_month = today.strftime('%Y-%m')
+        week_start = today - timedelta(days=today.weekday())   # lunes
+        week_end = week_start + timedelta(days=6)              # domingo
+
+        try:
+            all_rows = self.worksheet.get_all_values()
+            month_total = 0.0
+            week_total = 0.0
+            by_category: dict[str, float] = {}
+
+            for row in all_rows:
+                if len(row) < 4:
+                    continue
+                fecha_str, categoria, monto_str = row[0], row[2], row[3]
+                if not fecha_str.startswith(current_month):
+                    continue
+                try:
+                    monto = float(monto_str)
+                    row_date = date.fromisoformat(fecha_str)
+                except (ValueError, TypeError):
+                    continue
+
+                month_total += monto
+                by_category[categoria] = by_category.get(categoria, 0.0) + monto
+
+                if week_start <= row_date <= week_end:
+                    week_total += monto
+
+            return {
+                'month_total': month_total,
+                'week_total': week_total,
+                'by_category': by_category,
+            }
+        except Exception as e:
+            logger.error(f"Error al obtener estadísticas: {e}")
+            return {'month_total': 0.0, 'week_total': 0.0, 'by_category': {}}
+
     @rate_limit(max_calls=50, period=60)
     def append_expenses(self, expenses: list) -> None:
         """

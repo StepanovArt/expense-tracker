@@ -142,11 +142,16 @@ async def handle_text_message(user_message, update: Update, context: ContextType
         # 4. Guardar en Google Sheets en un solo llamado API
         sheets_client.append_expenses(valid_expenses)
 
-        # 5. Confirmar al usuario (con advertencia de parciales si aplica)
+        # 5. Obtener estadísticas del mes y semana actual
+        monthly_stats = sheets_client.get_spending_stats()
+
+        # 6. Confirmar al usuario (con advertencia de parciales si aplica)
         confirmation_message = format_confirmation_message_list(valid_expenses)
         if errors:
             error_detail = '\n'.join(f"• {e}" for e in errors)
             confirmation_message += f"\n\n⚠️ No se registraron:\n{error_detail}"
+
+        confirmation_message += format_monthly_stats(monthly_stats)
 
         await update.message.reply_text(confirmation_message)
 
@@ -204,6 +209,43 @@ def format_confirmation_message_list(expenses: list) -> str:
     lines = [f"✅ {len(expenses)} gastos registrados en Google Sheets ✨\n"]
     for e in expenses:
         lines.append(f"• AED {e['monto']:.2f} — {e['categoria']} ({e['fecha']}): {e['descripcion']}")
+    return '\n'.join(lines)
+
+
+def format_monthly_stats(stats: dict) -> str:
+    """
+    Formatea un bloque de estadísticas (semana + mes) para añadir al mensaje de confirmación.
+
+    Args:
+        stats: Dict con 'month_total', 'week_total', 'by_category'
+               devuelto por SheetsClient.get_spending_stats()
+
+    Returns:
+        Bloque de texto listo para concatenar al mensaje de confirmación
+    """
+    from datetime import date
+    _MONTHS_ES = [
+        '', 'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+        'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+    ]
+    month_total = stats.get('month_total', 0.0)
+    week_total = stats.get('week_total', 0.0)
+    by_category = stats.get('by_category', {})
+
+    if month_total == 0:
+        return ''
+
+    month_name = _MONTHS_ES[date.today().month]
+    lines = [
+        f"\n\n📊 Estadísticas",
+        f"  📅 Esta semana: AED {week_total:,.2f}",
+        f"  🗓 Este mes ({month_name}): AED {month_total:,.2f}",
+    ]
+    if by_category:
+        lines.append("  ─────────────────")
+        sorted_cats = sorted(by_category.items(), key=lambda x: x[1], reverse=True)
+        for cat, amount in sorted_cats:
+            lines.append(f"  • {cat}: AED {amount:,.2f}")
     return '\n'.join(lines)
 
 
