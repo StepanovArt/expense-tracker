@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Secrets
+.env
+
+# Data and weights are NEVER committed (CLAUDE.md §0)
+data/raw/
+data/processed/
+data/synthetic/
+data/cache/
+outputs/
+*.safetensors
+*.bin
+*.gguf
+*.pt
+*.pth
+wandb/
+
+# Frozen split manifests ARE committed (they contain only ids + hashes, no data)
+!data/splits/
