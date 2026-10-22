@@ -181,7 +181,8 @@ def make_callbacks(
 def train_grpo(cfg: dict[str, Any]) -> Path:
     import torch
     from peft import LoraConfig
-    from trl import GRPOConfig, GRPOTrainer
+    from trl.trainer.grpo_config import GRPOConfig
+    from trl.trainer.grpo_trainer import GRPOTrainer
 
     from receipt_vlm.eval.runner import load_split, select_subset
     from receipt_vlm.rewards.grpo_rewards import WEIGHTS, make_trl_reward_funcs

@@ -59,6 +59,6 @@ def install_cpu_logprob_fallback() -> bool:
 
     if not hasattr(tu, "_ChunkedLogProbFunction"):
         return False
-    tu._ChunkedLogProbFunction = TorchLogProb  # type: ignore[attr-defined]
+    tu._ChunkedLogProbFunction = TorchLogProb
     log.info("no CUDA: using the PyTorch log-prob fallback instead of TRL's Triton kernel")
     return True
