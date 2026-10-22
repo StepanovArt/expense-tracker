@@ -26,3 +26,6 @@ wandb/
 
 # Frozen split manifests ARE committed (they contain only ids + hashes, no data)
 !data/splits/
+
+# The lockfile IS committed (the parent repo ignores uv.lock)
+!uv.lock
