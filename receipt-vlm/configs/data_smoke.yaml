@@ -1,0 +1,16 @@
+# Smoke dataset: synthetic only (no downloads), written under outputs/smoke (ephemeral).
+_base_: data.yaml
+paths:
+  raw: outputs/smoke/data/raw
+  processed: outputs/smoke/data/processed
+  splits: outputs/smoke/data/splits
+  synthetic: outputs/smoke/data/synthetic
+  stats_report: outputs/smoke/data_stats.md
+sources:
+  cord: {enabled: false}
+  sroie: {enabled: false}
+  wildreceipt: {enabled: false}
+synthetic:
+  n_samples: 45
+  max_train_share: 1.0
+  grid_samples: 10

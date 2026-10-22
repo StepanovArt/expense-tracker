@@ -1,0 +1,11 @@
+# Single 16 GB GPU: bf16/fp16 2B policy (merged SFT) + LoRA, group of 4, shorter completions.
+_base_: base.yaml
+run_name: grpo-gpu16
+grpo:
+  num_generations: 4
+  max_completion_length: 640
+train:
+  per_device_batch_size: 4
+  grad_accum: 4
+eval:
+  batch_size: 4

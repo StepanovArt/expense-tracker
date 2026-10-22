@@ -1,0 +1,12 @@
+# >= 24 GB GPU (L4-24, A10, 3090/4090, A100): bf16 LoRA, larger images and batch.
+_base_: base.yaml
+run_name: sft-gpu24plus
+model:
+  attn_implementation: sdpa
+image:
+  max_pixels: 1638400            # 1,600 visual tokens; re-run baselines at this cap if used
+train:
+  per_device_batch_size: 4
+  grad_accum: 4
+eval:
+  batch_size: 16

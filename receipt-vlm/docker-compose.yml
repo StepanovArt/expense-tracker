@@ -1,0 +1,32 @@
+# GPU deployment: vLLM serves the merged model, the API validates and retries.
+#   make merge && docker compose up --build
+#   curl -F image=@sample.jpg localhost:8000/extract
+services:
+  vllm:
+    image: vllm/vllm-openai:v0.30.0   # = vllm version in uv.lock
+    command: >
+      --model /models/merged --served-model-name receipt-vlm
+      --max-model-len 8192 --limit-mm-per-prompt '{"image": 1, "video": 0}'
+      --mm-processor-kwargs '{"min_pixels": 65536, "max_pixels": 1048576}'
+      --gpu-memory-utilization 0.85
+    volumes:
+      - ./outputs/merged:/models/merged:ro
+    ports: ["8001:8000"]
+    ipc: host
+    deploy:
+      resources:
+        reservations:
+          devices: [{driver: nvidia, count: 1, capabilities: [gpu]}]
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/v1/models"]
+      interval: 15s
+      retries: 40
+  api:
+    build: .
+    environment:
+      RECEIPT_VLM_BACKEND: openai
+      VLLM_BASE_URL: http://vllm:8000/v1
+      RECEIPT_VLM_MODEL: receipt-vlm
+    ports: ["8000:8000"]
+    depends_on:
+      vllm: {condition: service_healthy}

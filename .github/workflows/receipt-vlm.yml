@@ -1,0 +1,31 @@
+name: receipt-vlm
+
+on:
+  push:
+    paths: ["receipt-vlm/**", ".github/workflows/receipt-vlm.yml"]
+  pull_request:
+    paths: ["receipt-vlm/**", ".github/workflows/receipt-vlm.yml"]
+
+defaults:
+  run:
+    working-directory: receipt-vlm
+
+jobs:
+  check-and-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: "0.11.32"
+      - name: System packages (Tesseract EN/AR/RU for the OCR baseline)
+        run: sudo apt-get update && sudo apt-get install -y tesseract-ocr tesseract-ocr-ara tesseract-ocr-rus
+      - name: Free disk (torch wheels are large)
+        run: sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+      - name: Install
+        run: uv sync --python 3.12 --extra ml --extra ocr --extra serve --extra hub
+      - name: make check (ruff, mypy, all tests incl. tiny-model tests)
+        run: make check
+      - name: make smoke (full pipeline on CPU with a tiny random model)
+        run: make smoke

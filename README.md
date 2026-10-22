@@ -502,3 +502,12 @@ Este proyecto es de código abierto. Úsalo y modifícalo como necesites.
 ## 🤝 Contribuciones
 
 Las contribuciones son bienvenidas. Por favor abre un issue o pull request.
+
+## 🧾 receipt-vlm (subproject)
+
+[`receipt-vlm/`](receipt-vlm/) is a separate, self-contained project in this repository: a
+fine-tuned Qwen3-VL-2B that turns receipt photos (English, Arabic, Russian) into strict JSON,
+with a statistically rigorous evaluation. It has its own `pyproject.toml`, Makefile and
+[README](receipt-vlm/README.md), and does not change how this bot runs.
+[`receipt-vlm/examples/telegram_bot_client.py`](receipt-vlm/examples/telegram_bot_client.py) shows
+how a bot can send receipt photos to its `/extract` API.

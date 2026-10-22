@@ -1,0 +1,11 @@
+# Single 16 GB GPU (Colab T4/L4, Kaggle P100/T4): QLoRA 4-bit, batch 1 x accum 16.
+_base_: base.yaml
+run_name: sft-gpu16
+model:
+  load_in_4bit: true
+train:
+  per_device_batch_size: 1
+  grad_accum: 16
+  optim: paged_adamw_8bit
+eval:
+  batch_size: 4

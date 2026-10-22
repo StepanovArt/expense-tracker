@@ -1,0 +1,37 @@
+# Data pipeline config (Phase 1-2). One command: `make data` / `make synth`.
+seed: 1234
+paths:
+  raw: data/raw
+  processed: data/processed
+  splits: data/splits
+  synthetic: data/synthetic
+  stats_report: reports/data_stats.md
+sources:
+  cord:
+    enabled: true
+    hf_dataset: naver-clova-ix/cord-v2   # official train/validation/test
+  sroie:
+    enabled: true
+    # The official ICDAR test labels are not redistributed by the mirror, so we split
+    # its 626 labelled trainval images 80/10/10 ourselves (see DECISIONS.md).
+    git_url: https://github.com/zzzDavid/ICDAR-2019-SROIE
+    git_rev: 27be4271b251c256f695acbade9a801bffe85994
+  wildreceipt:
+    enabled: true
+    url: https://download.openmmlab.com/mmocr/data/wildreceipt.tar
+split:
+  ratios: {train: 0.8, val: 0.1, test: 0.1}
+  # 256-bit pHash Hamming distance at or below which two images are near-duplicates.
+  # Calibrated on SROIE: true re-scans are at 0-4, different receipts of one shop at >= 8.
+  phash_max_distance: 6
+images:
+  # Long side cap applied when copying images into data/processed (originals untouched).
+  max_side: 1600
+synthetic:
+  n_samples: 3000
+  max_train_share: 0.5
+  languages: [en, ar, ru]
+  layouts: [supermarket, restaurant, pharmacy]
+  currencies: [AED, USD, RUB, EUR]
+  split_ratios: {train: 0.8, val: 0.1, test: 0.1}
+  grid_samples: 20

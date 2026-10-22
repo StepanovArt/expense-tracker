@@ -1,0 +1,17 @@
+# CPU-only variant (no vLLM): the API runs the model in-process with transformers.
+# Slow for a 2B model (tens of seconds per receipt on CPU) but needs no GPU:
+#   RECEIPT_VLM_MODEL_DIR=./outputs/merged docker compose -f docker-compose.cpu.yml up --build
+services:
+  api:
+    image: receipt-vlm-api:cpu
+    build:
+      context: .
+      args: {EXTRAS: "--extra serve --extra ml"}
+    environment:
+      RECEIPT_VLM_BACKEND: hf
+      RECEIPT_VLM_MODEL: /models/merged
+      RECEIPT_VLM_DTYPE: float32
+      RECEIPT_VLM_MAX_PIXELS: ${RECEIPT_VLM_MAX_PIXELS:-1048576}
+    volumes:
+      - ${RECEIPT_VLM_MODEL_DIR:-./outputs/merged}:/models/merged:ro
+    ports: ["8000:8000"]

@@ -1,0 +1,24 @@
+# Everything that goes into reports/RESULTS.md. `make report` recomputes all tables and
+# figures from saved predictions; models without predictions are listed as "not run".
+_base_: baselines.yaml
+models:
+  M1:
+    desc: Qwen3-VL-2B + LoRA SFT (ours)
+    backend: hf
+    model: Qwen/Qwen3-VL-2B-Instruct
+    adapter: outputs/sft/best
+  M2:
+    desc: M1 + GRPO (ours)
+    backend: hf
+    model: outputs/sft/merged      # SFT adapter merged into the base by train_grpo
+    adapter: outputs/grpo/best     # GRPO LoRA on top of the merged SFT model
+report:
+  splits: [val, test]
+  ours: [M1, M2]
+  order: [B0, B1, B2, B3, M1, M2]
+  comparisons:            # A vs B, paired on the same images
+    - [M1, B1]   # RQ1
+    - [M2, M1]   # RQ2
+    - [M1, B2]   # RQ3
+    - [M1, B3]   # RQ3
+    - [M1, B0]   # RQ3
