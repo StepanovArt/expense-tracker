@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 6 — GRPO (code next; GPU runs pending for Phases 4–6)
+Phase 8 — Serving, demo, release (next); GPU runs pending for Phases 3–7
 
 ## Environment facts (session 1, 2026-10-22)
 
@@ -62,10 +62,22 @@ Phase 6 — GRPO (code next; GPU runs pending for Phases 4–6)
 - **Phase 5** (test-set evaluation) is code-complete through `run_eval.py --split test` +
   `make report` (figures + breakdowns + paired tests); it is blocked only by missing predictions.
 
+- **Phase 6** — GRPO: rewards reuse the eval code (17 tests incl. adversarial: empty, garbage,
+  all-null, schema-invalid-but-right, correct abstention); `train/grpo.py` merges the SFT
+  adapter so KL is to the SFT policy, logs reward components, null rate per field, output
+  length, KL; flags null-rate-up-while-reward-up. CPU: PyTorch fallback for TRL's Triton
+  log-prob kernel; slow test shows reward 1.0 for exact completions, non-zero gradients when
+  group rewards vary, LoRA weights moving, KL > 0.
+  - **DoD gap:** M2 training + M2 vs M1 paired test need the GPU machine.
+- **Phase 7** — error analysis: `eval/errors.py` taxonomy + `scripts/error_analysis.py`
+  (100 sampled errors + all-error counts per language, field table, error rate by language /
+  source / image-sharpness tercile, 6 annotated examples). Verified on mock predictions only.
+  - **DoD gap:** needs real predictions of the best model.
+
 ## Next
 
-- Phase 6: `train/grpo.py` (TRL GRPOTrainer, rewards from eval code, null-rate/length/KL
-  monitoring), CPU smoke with the tiny model.
+- Phase 8: merge script, FastAPI /extract (retry + 422), vLLM/llama.cpp serving, Docker,
+  Gradio demo, HF Hub push + model card, Telegram client example.
 
 ## Known issues
 
@@ -89,4 +101,11 @@ make sft CONFIG=configs/sft/gpu16.yaml                      # M1 (Phase 4)
 uv run python scripts/train_sft.py --config configs/sft/gpu16.yaml \
     output_dir=outputs/sft_proj lora.train_projector=true   # projector ablation; keep the val winner
 make eval MODEL=M1 SPLIT=val && make report                 # RQ1 on val (M1 vs B1 paired)
+make grpo CONFIG=configs/grpo/gpu16.yaml                    # M2 (Phase 6); watch reward_hacking_warning.json
+make eval MODEL=M2 SPLIT=val && make report                 # RQ2 on val first
+# --- frozen test set, once ---
+uv run python scripts/run_eval.py --config configs/eval/final.yaml --split test --models B0 B1 B2 B3 M1 M2
+make report
+uv run python scripts/error_analysis.py --model M2 --split test   # RQ4 (or the best model)
+# then write the RQ1-RQ4 paragraphs in reports/RESULTS.md from the generated tables
 ```
