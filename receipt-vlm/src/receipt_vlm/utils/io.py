@@ -17,6 +17,15 @@ def resolve(path: str | Path) -> Path:
     return p if p.is_absolute() else PROJECT_ROOT / p
 
 
+def project_relative(path: str | Path) -> str:
+    """Path relative to the project root when inside it (portable manifests), else absolute."""
+    p = Path(path).resolve()
+    try:
+        return str(p.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return str(p)
+
+
 def read_jsonl(path: str | Path) -> list[dict[str, Any]]:
     return list(iter_jsonl(path))
 

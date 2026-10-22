@@ -20,7 +20,7 @@ from receipt_vlm.data.synthetic.fonts import ensure_fonts
 from receipt_vlm.data.synthetic.render import render
 from receipt_vlm.data.synthetic.templates import Lang, Layout, ReceiptSpec, make_spec
 from receipt_vlm.schema import Receipt
-from receipt_vlm.utils.io import resolve, write_jsonl
+from receipt_vlm.utils.io import project_relative, resolve, write_jsonl
 from receipt_vlm.utils.logging import get_logger
 from receipt_vlm.utils.seed import rng
 
@@ -73,7 +73,7 @@ def generate_one(args: tuple[int, int, str]) -> dict[str, Any]:
     img.save(path, format="JPEG", quality=int(dmeta["jpeg_quality"]))
     return {
         "source_id": sid,
-        "image": str(path.relative_to(resolve("."))),
+        "image": project_relative(path),
         "target": Receipt.model_validate(gold.model_dump()).model_dump(mode="json"),
         "labelled": list(LABEL_KEYS),  # the generator knows every field exactly
         "language": spec.lang,

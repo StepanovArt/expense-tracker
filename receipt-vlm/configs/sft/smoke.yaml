@@ -1,0 +1,24 @@
+# CPU smoke run with the tiny random Qwen3-VL (pipeline check only, < 1 min).
+_base_: base.yaml
+run_name: sft-smoke
+output_dir: outputs/smoke/sft
+model:
+  name: outputs/smoke/tiny-qwen3vl
+  dtype: float32
+image:
+  min_pixels: 4096
+  max_pixels: 65536
+data:
+  max_train_samples: 16
+train:
+  max_steps: 6
+  per_device_batch_size: 2
+  grad_accum: 2
+  lr: 1.0e-3
+  logging_steps: 2
+  gradient_checkpointing: false
+eval:
+  val_subset: 4
+  every_steps: 3
+  max_new_tokens: 48
+  batch_size: 4

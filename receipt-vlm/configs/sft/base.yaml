@@ -1,0 +1,41 @@
+# Shared SFT settings (CLAUDE.md §6.1). Mode files override what differs.
+seed: 1234
+run_name: sft
+output_dir: outputs/sft
+model:
+  name: Qwen/Qwen3-VL-2B-Instruct
+  load_in_4bit: false
+  dtype: auto
+  attn_implementation: null      # "flash_attention_2" / "sdpa" on GPU if installed
+  use_unsloth: false             # preferred fast path on GPU; falls back to peft if it fails
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  train_projector: false         # compare true/false on val F1 (log the result)
+image:
+  min_pixels: 65536
+  max_pixels: 1048576            # same cap as eval
+data:
+  data_dir: data/processed
+  train_split: train
+  mask_unlabelled: true          # also mask values of fields the source does not label
+  max_train_samples: null
+  sources: null
+train:
+  lr: 2.0e-4
+  epochs: 3
+  max_steps: null
+  per_device_batch_size: 2
+  grad_accum: 8                  # effective batch 16
+  scheduler: cosine
+  warmup_ratio: 0.03
+  weight_decay: 0.0
+  gradient_checkpointing: true
+  logging_steps: 10
+  precision: auto
+eval:
+  val_subset: 200                # fixed (seeded) subset, generation-based F1 each epoch
+  every_steps: null              # null = every epoch
+  max_new_tokens: 1024
+  batch_size: 8

@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 4 — SFT (code next; GPU run pending)
+Phase 6 — GRPO (code next; GPU runs pending for Phases 4–6)
 
 ## Environment facts (session 1, 2026-10-22)
 
@@ -53,10 +53,19 @@ Phase 4 — SFT (code next; GPU run pending)
   - **DoD gap:** the baseline validation table needs B0–B3 predictions, which need Hub access
     + GPU. RESULTS.md lists them as *not run*; nothing is invented.
 
+- **Phase 4** — SFT: `train/sft.py` (LoRA on LM attention+MLP, vision frozen, optional
+  projector, QLoRA for gpu16, Unsloth switch), `data/collate.py` (assistant-only + partial-label
+  masking), configs smoke/gpu16/gpu24plus, generation-based val-F1 checkpoint selection.
+  CPU smoke: `make sft CONFIG=configs/sft/smoke.yaml` (14 s). Wiring test: tiny model memorises
+  two receipts exactly (val F1 = 1.0) in 250 steps.
+  - **DoD gap:** M1 training + paired comparison with B1 needs the GPU machine.
+- **Phase 5** (test-set evaluation) is code-complete through `run_eval.py --split test` +
+  `make report` (figures + breakdowns + paired tests); it is blocked only by missing predictions.
+
 ## Next
 
-- Phase 4: SFT code (written: `train/sft.py`, `data/collate.py`, label-masking tests pass);
-  CPU smoke run with the tiny model; the real M1 run needs the GPU machine.
+- Phase 6: `train/grpo.py` (TRL GRPOTrainer, rewards from eval code, null-rate/length/KL
+  monitoring), CPU smoke with the tiny model.
 
 ## Known issues
 
@@ -76,4 +85,8 @@ uv run pytest -m data
 git add data/splits reports/data_stats.md && git commit -m "data: freeze CORD/WildReceipt test manifests"
 make eval-baselines SPLIT=val      # B0-B3 zero-shot on validation (Phase 3 DoD)
 make report                        # fills reports/RESULTS.md (val section)
+make sft CONFIG=configs/sft/gpu16.yaml                      # M1 (Phase 4)
+uv run python scripts/train_sft.py --config configs/sft/gpu16.yaml \
+    output_dir=outputs/sft_proj lora.train_projector=true   # projector ablation; keep the val winner
+make eval MODEL=M1 SPLIT=val && make report                 # RQ1 on val (M1 vs B1 paired)
 ```

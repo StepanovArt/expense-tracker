@@ -5,7 +5,7 @@ PY      ?= uv run python
 SPLIT   ?= val
 CONFIG  ?= configs/sft/gpu16.yaml
 MODEL   ?= M1
-EVALCFG ?= configs/eval/baselines.yaml
+EVALCFG ?= configs/eval/final.yaml
 EXTRAS  ?= --extra ml --extra ocr --extra serve --extra hub
 
 .PHONY: help setup setup-gpu data synth eval-baselines sft grpo eval report merge serve api demo smoke \
@@ -29,7 +29,7 @@ synth:  ## generate synthetic EN/AR/RU receipts and merge them into the dataset
 	$(PY) scripts/build_data.py --config configs/data.yaml --merge-only
 
 eval-baselines:  ## B0-B3 zero-shot on SPLIT (val|test)
-	$(PY) scripts/run_eval.py --config $(EVALCFG) --split $(SPLIT) --models B0 B1 B2 B3
+	$(PY) scripts/run_eval.py --config configs/eval/baselines.yaml --split $(SPLIT) --models B0 B1 B2 B3
 
 sft:  ## LoRA SFT (CONFIG=configs/sft/{smoke,gpu16,gpu24plus}.yaml)
 	$(PY) scripts/train_sft.py --config $(CONFIG)

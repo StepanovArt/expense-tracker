@@ -24,7 +24,14 @@ from receipt_vlm.data.splits import (
     check_or_freeze_manifest,
     manifest_rows,
 )
-from receipt_vlm.utils.io import read_jsonl, resolve, sha256_bytes, write_json, write_jsonl
+from receipt_vlm.utils.io import (
+    project_relative,
+    read_jsonl,
+    resolve,
+    sha256_bytes,
+    write_json,
+    write_jsonl,
+)
 from receipt_vlm.utils.logging import get_logger
 from receipt_vlm.utils.seed import rng
 
@@ -43,14 +50,14 @@ def _process_one(args: tuple[Converted, str, int, bool]) -> dict[str, Any]:
     raw = conv.image_bytes if conv.image_bytes is not None else Path(conv.image_path).read_bytes()  # type: ignore[arg-type]
     img = ImageOps.exif_transpose(Image.open(io.BytesIO(raw))).convert("RGB")
     if reference_original and max(img.size) <= max_side and conv.image_path is not None:
-        image_rel = str(Path(conv.image_path).resolve().relative_to(resolve(".")))
+        image_rel = project_relative(conv.image_path)
     else:
         if max(img.size) > max_side:
             img.thumbnail((max_side, max_side), Image.Resampling.LANCZOS)
         dest = resolve(out_dir) / conv.source / f"{_safe(conv.source_id)}.jpg"
         dest.parent.mkdir(parents=True, exist_ok=True)
         img.save(dest, format="JPEG", quality=92)
-        image_rel = str(dest.relative_to(resolve(".")))
+        image_rel = project_relative(dest)
     return {
         "id": f"{conv.source}/{conv.source_id}",
         "source": conv.source,
