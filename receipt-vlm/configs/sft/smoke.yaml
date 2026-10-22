@@ -9,6 +9,7 @@ image:
   min_pixels: 4096
   max_pixels: 65536
 data:
+  data_dir: outputs/smoke/data/processed
   max_train_samples: 16
 train:
   max_steps: 6

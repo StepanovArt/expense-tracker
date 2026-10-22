@@ -120,4 +120,4 @@ markers = [
     "slow: needs torch/transformers and builds a tiny model (still CPU-only)",
     "data: needs downloaded raw datasets under data/raw (skipped when absent)",
 ]
-filterwarnings = ["ignore::DeprecationWarning"]
+filterwarnings = ["ignore::DeprecationWarning", "ignore:Using `httpx` with `starlette.testclient`"]

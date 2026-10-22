@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 8 — Serving, demo, release (next); GPU runs pending for Phases 3–7
+Phase 9 — README & polish (next); GPU runs pending for Phases 3–7
 
 ## Environment facts (session 1, 2026-10-22)
 
@@ -74,10 +74,19 @@ Phase 8 — Serving, demo, release (next); GPU runs pending for Phases 3–7
   source / image-sharpness tercile, 6 annotated examples). Verified on mock predictions only.
   - **DoD gap:** needs real predictions of the best model.
 
+- **Phase 8** — `scripts/merge_lora.py` (stacked adapters; merged logits = adapter logits within
+  1e-5, tested), FastAPI `/extract` (validation, one retry, 422/400/413/502; mocked-backend
+  tests), `scripts/serve.sh` + `docker-compose.yml` (vLLM GPU) + `docker-compose.cpu.yml`,
+  Gradio demo (serves, 6 deterministic synthetic test examples), `scripts/push_to_hub.py` +
+  model card (says "not evaluated" until test metrics exist), `examples/telegram_bot_client.py`.
+  - **DoD check run here:** `docker compose -f docker-compose.cpu.yml up` → `curl -F image=@…
+    localhost:8000/extract` → 200 with valid receipt JSON (tiny memorising model, CPU).
+  - Not run here: the vLLM container (needs GPU), HF upload (no token), llama.cpp recipe.
+- `make smoke`: whole pipeline with real CLI scripts in 81 s on CPU.
+
 ## Next
 
-- Phase 8: merge script, FastAPI /extract (retry + 422), vLLM/llama.cpp serving, Docker,
-  Gradio demo, HF Hub push + model card, Telegram client example.
+- Phase 9: README as a short technical report; reproducibility commands; licences.
 
 ## Known issues
 

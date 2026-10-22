@@ -1,5 +1,6 @@
 # CPU smoke: tiny random Qwen3-VL on a handful of validation images. Numbers are meaningless.
 _base_: baselines.yaml
+data_dir: outputs/smoke/data/processed
 preds_dir: outputs/smoke/preds
 metrics_dir: outputs/smoke/metrics
 bootstrap: {resamples: 200}
