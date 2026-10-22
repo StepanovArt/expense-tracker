@@ -97,6 +97,12 @@ warn_redundant_casts = true
 show_error_codes = true
 plugins = ["pydantic.mypy"]
 
+# mypy 2.x reports calls into untyped libraries (transformers, peft, unsloth) by default;
+# model/training glue code is exempt, the strict modules below are not.
+[[tool.mypy.overrides]]
+module = ["receipt_vlm.models.*", "receipt_vlm.train.*", "receipt_vlm.serve.*", "receipt_vlm.baselines.*"]
+disable_error_code = ["no-untyped-call"]
+
 # Strict where correctness matters most (CLAUDE.md §3).
 [[tool.mypy.overrides]]
 module = [

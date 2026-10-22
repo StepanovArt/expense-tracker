@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 2 — Synthetic multilingual generator (next)
+Phase 3 — Evaluation harness + baselines (next)
 
 ## Environment facts (session 1, 2026-10-22)
 
@@ -28,9 +28,24 @@ Phase 2 — Synthetic multilingual generator (next)
   - CORD and WildReceipt are **gaps in this session** (hosts blocked); `make data` on a machine
     with access appends them (frozen SROIE test entries cannot move).
 
+- **Phase 2** — synthetic generator (`data/synthetic/`): 3 languages × 3 layouts, currencies
+  AED/USD/RUB/EUR, exact consistent ground truth, Arabic shaped + RTL, Arabic-Indic digits on
+  ~30 % of Arabic receipts, degradations (crumple, perspective, ±7° rotation, lighting, blur,
+  noise, JPEG 35–91). 3,000 samples in ~8 min on 4 CPUs. Merged with the 50 % cap:
+  train 994 (497 SROIE + 497 synthetic), val 362, test 362 (synthetic test = 300, 100/language).
+  - Visual check of `reports/figures/synthetic_samples.png` (20 random samples): Arabic letters
+    are joined and read right-to-left (merchant names, items, "الإجمالي"), RTL layout mirrored
+    (labels right, amounts left), Arabic-Indic digits render; Cyrillic correct; every checked
+    receipt (one per language, by hand) matches its gold JSON line by line and the arithmetic
+    holds. Fixed after the first look: pink/green paper tint and saturated backgrounds
+    (now near-white paper on grey/brown tables). Remaining realism gaps: no handwriting, no
+    logos, no folded-over corners, no motion blur; long receipts get small text after the
+    1600 px cap.
+
 ## Next
 
-- Phase 2: synthetic EN/AR/RU generator, merged with the ≤ 50 % train-share cap.
+- Phase 3: eval harness (done in code, metric tests pass) + CPU smoke of the baseline runner
+  with the tiny model; baselines B0–B3 themselves need the GPU machine.
 
 ## Known issues
 
