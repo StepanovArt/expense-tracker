@@ -1,0 +1,27 @@
+# CPU smoke: tiny random Qwen3-VL on a handful of validation images. Numbers are meaningless.
+_base_: baselines.yaml
+preds_dir: outputs/smoke/preds
+metrics_dir: outputs/smoke/metrics
+bootstrap: {resamples: 200}
+generation: {max_new_tokens: 48}
+image: {min_pixels: 4096, max_pixels: 65536}
+subset: {val: 8, test: 8}
+batch_size: 4
+models:
+  TINY:
+    desc: tiny random Qwen3-VL (pipeline check only)
+    backend: hf
+    model: outputs/smoke/tiny-qwen3vl
+    dtype: float32
+  TINY_SFT:
+    desc: tiny random Qwen3-VL + smoke LoRA (pipeline check only)
+    backend: hf
+    model: outputs/smoke/tiny-qwen3vl
+    adapter: outputs/smoke/sft/best
+    dtype: float32
+report:
+  splits: [val]
+  ours: [TINY_SFT]
+  order: [TINY, TINY_SFT]
+  comparisons:
+    - [TINY_SFT, TINY]

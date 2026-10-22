@@ -2,7 +2,7 @@
 
 ## Current phase
 
-Phase 3 — Evaluation harness + baselines (next)
+Phase 4 — SFT (code next; GPU run pending)
 
 ## Environment facts (session 1, 2026-10-22)
 
@@ -42,10 +42,21 @@ Phase 3 — Evaluation harness + baselines (next)
     logos, no folded-over corners, no motion blur; long receipts get small text after the
     1600 px cap.
 
+- **Phase 3** — evaluation harness: parsing (code fences, `<think>`, first balanced object),
+  normalisation, strict + lenient field P/R/F1, Hungarian item matching, total EM, arithmetic
+  consistency, latency; bootstrap CIs, paired bootstrap, McNemar; per-language / per-source
+  breakdowns with low-n flags; RESULTS.md auto-sections + 3 figures (checked visually on mock
+  data). Backends: HF transformers (batched greedy = unbatched, tested), offline vLLM,
+  OpenAI-compatible HTTP, OCR + LLM (Tesseract two-pass script-aware, PSM 6 chosen on val).
+  Smoke: `scripts/run_eval.py --config configs/eval/smoke.yaml` runs the tiny random model end
+  to end (preds JSONL → metrics JSON with CIs).
+  - **DoD gap:** the baseline validation table needs B0–B3 predictions, which need Hub access
+    + GPU. RESULTS.md lists them as *not run*; nothing is invented.
+
 ## Next
 
-- Phase 3: eval harness (done in code, metric tests pass) + CPU smoke of the baseline runner
-  with the tiny model; baselines B0–B3 themselves need the GPU machine.
+- Phase 4: SFT code (written: `train/sft.py`, `data/collate.py`, label-masking tests pass);
+  CPU smoke run with the tiny model; the real M1 run needs the GPU machine.
 
 ## Known issues
 
@@ -60,6 +71,9 @@ Phase 3 — Evaluation harness + baselines (next)
 ```bash
 make setup-gpu
 make data            # adds CORD + WildReceipt; SROIE test entries stay frozen
+make synth           # re-merge synthetic: the 50 % cap now admits more synthetic train
 uv run pytest -m data
-git add data/splits && git commit -m "data: freeze CORD/WildReceipt test manifests"
+git add data/splits reports/data_stats.md && git commit -m "data: freeze CORD/WildReceipt test manifests"
+make eval-baselines SPLIT=val      # B0-B3 zero-shot on validation (Phase 3 DoD)
+make report                        # fills reports/RESULTS.md (val section)
 ```
