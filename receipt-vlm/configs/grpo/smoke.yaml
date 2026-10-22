@@ -1,0 +1,29 @@
+# CPU smoke: tiny random Qwen3-VL + smoke SFT adapter, two GRPO steps (pipeline check only).
+_base_: base.yaml
+run_name: grpo-smoke
+output_dir: outputs/smoke/grpo
+model:
+  name: outputs/smoke/tiny-qwen3vl
+  sft_adapter: outputs/smoke/sft/best
+  merged_sft_dir: outputs/smoke/sft/merged
+  dtype: float32
+image:
+  min_pixels: 4096
+  max_pixels: 65536
+data:
+  data_dir: outputs/smoke/data/processed
+  max_train_samples: 8
+grpo:
+  num_generations: 2
+  max_completion_length: 24
+train:
+  max_steps: 2
+  per_device_batch_size: 2
+  grad_accum: 1
+  warmup_steps: 0
+  gradient_checkpointing: false
+eval:
+  val_subset: 4
+  every_steps: 2
+  max_new_tokens: 24
+  batch_size: 4

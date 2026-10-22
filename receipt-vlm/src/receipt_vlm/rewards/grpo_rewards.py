@@ -17,8 +17,9 @@ reward hacking:
 
 from __future__ import annotations
 
+import json
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Final
 
 from receipt_vlm.eval.metrics import is_fully_consistent, micro_f1, score_sample
@@ -36,6 +37,8 @@ class RewardBreakdown:
     consistency: float | None
     reward: float
     status: str
+    pred_null: dict[str, int] = field(default_factory=dict)  # labelled fields predicted null
+    n_chars: int = 0
 
 
 def _total_component(pr: ParseResult, sample: Mapping[str, Any]) -> float | None:
@@ -68,14 +71,24 @@ def compute_reward(
 ) -> RewardBreakdown:
     pr = parse_prediction(completion)
     r_format = 1.0 if pr.status == "ok" else 0.0
-    r_fields = micro_f1(score_sample(sample, pr).counts) if pr.status == "ok" else 0.0
+    scored = score_sample(sample, pr)
+    r_fields = micro_f1(scored.counts) if pr.status == "ok" else 0.0
     r_total = _total_component(pr, sample)
     r_cons = _consistency_component(pr, sample)
     parts = {"format": r_format, "fields": r_fields, "total": r_total, "consistency": r_cons}
     active = {k: v for k, v in parts.items() if v is not None}
     wsum = sum(weights[k] for k in active)
     reward = sum(weights[k] * v for k, v in active.items()) / wsum
-    return RewardBreakdown(r_format, r_fields, r_total, r_cons, float(reward), pr.status)
+    return RewardBreakdown(
+        r_format,
+        r_fields,
+        r_total,
+        r_cons,
+        float(reward),
+        pr.status,
+        scored.pred_null,
+        len(completion),
+    )
 
 
 def completion_text(completion: Any) -> str:
@@ -90,25 +103,52 @@ def completion_text(completion: Any) -> str:
     return str(completion)
 
 
-def make_trl_reward_funcs(weights: Mapping[str, float] = WEIGHTS) -> list[Any]:
-    """Reward functions in TRL's ``reward_funcs`` signature.
+def _decode(v: Any) -> Any:
+    """Dataset columns may hold JSON strings (avoids Arrow's nested-type inference)."""
+    return json.loads(v) if isinstance(v, str) else v
 
-    Returns the combined reward plus per-component logging functions with zero weight are
-    *not* used; instead the trainer logs components itself (see train/grpo.py). The dataset
-    must carry ``target``, ``labelled``, ``id`` columns, which TRL forwards as kwargs.
+
+def make_trl_reward_funcs(weights: Mapping[str, float] = WEIGHTS) -> list[Any]:
+    """Reward function in TRL's ``reward_funcs`` signature.
+
+    The dataset must carry ``id``, ``target`` and ``labelled`` columns (dicts/lists or JSON
+    strings), which TRL forwards as kwargs. When TRL passes ``log_metric``, the mean of each
+    reward component, the schema-valid rate, the mean output length and the per-field rate of
+    null predictions (reward-hacking monitor, CLAUDE.md §6.2) are logged with every batch.
     """
 
     def receipt_reward(prompts: list[Any], completions: list[Any], **kw: Any) -> list[float]:
-        out = []
+        out: list[RewardBreakdown] = []
+        n = len(completions)
+        compare = kw.get("string_compare") or ["default"] * n
         for i, c in enumerate(completions):
             sample = {
                 "id": kw["id"][i],
-                "target": kw["target"][i],
-                "labelled": kw["labelled"][i],
-                "string_compare": (kw.get("string_compare") or ["default"] * len(completions))[i],
+                "target": _decode(kw["target"][i]),
+                "labelled": _decode(kw["labelled"][i]),
+                "string_compare": compare[i],
             }
-            out.append(compute_reward(completion_text(c), sample, weights).reward)
-        return out
+            out.append(compute_reward(completion_text(c), sample, weights))
+        log = kw.get("log_metric")
+        if callable(log) and out:
+            log("reward/format", sum(b.format for b in out) / n)
+            log("reward/fields", sum(b.fields for b in out) / n)
+            tot = [b.total for b in out if b.total is not None]
+            if tot:
+                log("reward/total", sum(tot) / len(tot))
+            cons = [b.consistency for b in out if b.consistency is not None]
+            if cons:
+                log("reward/consistency", sum(cons) / len(cons))
+            log("schema_valid_rate", sum(b.status == "ok" for b in out) / n)
+            log("completion_chars", sum(b.n_chars for b in out) / n)
+            keys = {k for b in out for k in b.pred_null}
+            for k in sorted(keys):
+                vals = [b.pred_null[k] for b in out if k in b.pred_null]
+                log(f"null_rate/{k}", sum(vals) / len(vals))
+            all_null = [v for b in out for v in b.pred_null.values()]
+            if all_null:
+                log("null_rate/all", sum(all_null) / len(all_null))
+        return [b.reward for b in out]
 
     receipt_reward.__name__ = "receipt_reward"
     return [receipt_reward]

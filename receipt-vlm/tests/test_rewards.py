@@ -131,3 +131,20 @@ def test_trl_wrapper_and_conversational_completions() -> None:
         completion_text([{"role": "assistant", "content": [{"type": "text", "text": "hi"}]}])
         == "hi"
     )
+
+
+def test_trl_wrapper_logs_monitoring_metrics_and_accepts_json_columns() -> None:
+    (fn,) = make_trl_reward_funcs()
+    logged: dict[str, float] = {}
+    out = fn(
+        prompts=[None, None],
+        completions=[json.dumps(SYN["target"]), _j({})],
+        id=["x", "x"],
+        target=[json.dumps(SYN["target"])] * 2,
+        labelled=[json.dumps(SYN["labelled"])] * 2,
+        log_metric=lambda k, v: logged.__setitem__(k, v),
+    )
+    assert out[0] == 1.0 and out[1] == pytest.approx(0.2)
+    assert logged["schema_valid_rate"] == 1.0
+    assert logged["null_rate/total"] == 0.5 and logged["null_rate/items"] == 0.5
+    assert logged["reward/fields"] == pytest.approx(0.5)

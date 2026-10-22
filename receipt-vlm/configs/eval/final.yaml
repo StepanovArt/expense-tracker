@@ -10,8 +10,8 @@ models:
   M2:
     desc: M1 + GRPO (ours)
     backend: hf
-    model: Qwen/Qwen3-VL-2B-Instruct
-    adapter: outputs/grpo/best
+    model: outputs/sft/merged      # SFT adapter merged into the base by train_grpo
+    adapter: outputs/grpo/best     # GRPO LoRA on top of the merged SFT model
 report:
   splits: [val, test]
   ours: [M1, M2]

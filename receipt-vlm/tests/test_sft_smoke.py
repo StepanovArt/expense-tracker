@@ -17,7 +17,7 @@ ROOT = Path(__file__).parents[1]
 
 
 @pytest.mark.slow
-def test_tiny_model_memorises_two_receipts(tmp_path: Path) -> None:
+def test_tiny_sft_memorises_then_grpo_updates(tmp_path: Path) -> None:
     pytest.importorskip("torch")
     from receipt_vlm.models.tiny import build_tiny_qwen3_vl
     from receipt_vlm.train.sft import train_sft
@@ -68,6 +68,45 @@ def test_tiny_model_memorises_two_receipts(tmp_path: Path) -> None:
     sel = read_json(best / "selection.json")
     assert sel["val_overall_f1"] == 1.0 and sel["val_schema_valid_rate"] == 1.0
     assert (best / "adapter_model.safetensors").exists()
+
+    # GRPO from the memorised SFT policy: near-greedy sampling gives a mix of exact and broken
+    # completions, so group rewards vary, gradients flow and the policy moves away from SFT.
+    from safetensors.torch import load_file
+
+    from receipt_vlm.train.grpo import train_grpo
+    from receipt_vlm.utils.io import read_jsonl
+
+    gcfg = load_config(
+        ROOT / "configs" / "grpo" / "smoke.yaml",
+        [
+            f"model.name={model_dir}",
+            f"model.sft_adapter={best}",
+            f"model.merged_sft_dir={tmp_path / 'merged'}",
+            f"output_dir={tmp_path / 'grpo'}",
+            f"data.data_dir={tmp_path / 'data'}",
+            "data.max_train_samples=null",
+            "grpo.max_completion_length=300",
+            "grpo.temperature=0.08",
+            "grpo.num_generations=4",
+            "train.per_device_batch_size=4",
+            "train.max_steps=3",
+            "train.lr=1e-3",
+            "eval.max_new_tokens=300",
+            "eval.val_subset=2",
+            "eval.every_steps=3",
+        ],
+    )
+    train_grpo(gcfg)
+    logs = [r for r in read_jsonl(tmp_path / "grpo" / "metrics.jsonl") if "reward" in r]
+    assert max(r["reward"] for r in logs) >= 0.5  # exact completions are rewarded inside TRL
+    assert any(r["reward_std"] > 0 for r in logs) and any(r["grad_norm"] > 0 for r in logs)
+    assert all("null_rate/all" in r and "kl" in r for r in logs)
+    lora_b = [
+        v
+        for k, v in load_file(tmp_path / "grpo" / "best" / "adapter_model.safetensors").items()
+        if "lora_B" in k
+    ]
+    assert lora_b and max(float(v.abs().max()) for v in lora_b) > 0
 
 
 @pytest.mark.slow

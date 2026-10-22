@@ -1,0 +1,46 @@
+# GRPO on top of the best SFT checkpoint (CLAUDE.md §6.2). Mode files override.
+seed: 1234
+run_name: grpo
+output_dir: outputs/grpo
+model:
+  name: Qwen/Qwen3-VL-2B-Instruct
+  sft_adapter: outputs/sft/best        # merged into the base -> KL is measured to the SFT policy
+  merged_sft_dir: outputs/sft/merged   # M2 = this model + outputs/grpo/best
+  dtype: auto
+image:
+  min_pixels: 65536
+  max_pixels: 1048576
+data:
+  data_dir: data/processed
+  max_train_samples: 1500              # a train subset, stratified by source
+  sources: null
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+grpo:
+  num_generations: 6                   # group size (4-8)
+  max_completion_length: 768
+  temperature: 1.0
+  beta: 0.04                           # KL coefficient (> 0 so KL to SFT is logged and penalised)
+  loss_type: dapo                      # TRL default token-level GRPO loss
+  mask_truncated_completions: true
+  use_vllm: false
+train:
+  lr: 5.0e-6
+  max_steps: 300
+  per_device_batch_size: 6             # = one group per step and device
+  grad_accum: 2
+  scheduler: constant_with_warmup
+  warmup_steps: 10
+  logging_steps: 1
+  gradient_checkpointing: true
+eval:
+  val_subset: 200
+  every_steps: 50
+  max_new_tokens: 1024
+  batch_size: 8
+monitor:
+  window: 10                           # logged steps per comparison window
+  min_null_rise: 0.05                  # flag if mean null rate rises > 5 pts while reward rises
+reward_weights: {format: 0.2, fields: 0.5, total: 0.2, consistency: 0.1}
