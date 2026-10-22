@@ -8,11 +8,11 @@ MODEL   ?= M1
 EVALCFG ?= configs/eval/final.yaml
 EXTRAS  ?= --extra ml --extra ocr --extra serve --extra hub
 
-.PHONY: help setup setup-gpu data synth eval-baselines sft grpo eval report merge serve api demo smoke \
+.PHONY: help setup setup-gpu data synth eval-baselines sft grpo eval report merge merge-m2 serve api demo smoke \
         lint format typecheck test test-all check docker clean-smoke
 
 help:  ## list targets
-	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-16s %s\n",$$1,$$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  %-16s %s\n",$$1,$$2}'
 
 setup:  ## uv sync (CPU extras) + pre-commit hooks
 	uv sync $(EXTRAS)
@@ -43,8 +43,11 @@ eval:  ## evaluate one model id from the eval config (MODEL=M1 SPLIT=val)
 report:  ## regenerate reports/RESULTS.md + figures from saved predictions
 	$(PY) scripts/make_report.py --config configs/eval/final.yaml
 
-merge:  ## merge LoRA adapter into base weights -> outputs/merged
+merge:  ## merge the SFT adapter (M1) into the base weights -> outputs/merged
 	$(PY) scripts/merge_lora.py --adapter outputs/sft/best --out outputs/merged
+
+merge-m2:  ## M2: GRPO adapter on top of the merged SFT model -> outputs/merged
+	$(PY) scripts/merge_lora.py --base outputs/sft/merged --adapter outputs/grpo/best --out outputs/merged
 
 serve:  ## vLLM OpenAI server on the merged model + FastAPI /extract (needs GPU)
 	bash scripts/serve.sh

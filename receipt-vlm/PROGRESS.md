@@ -2,7 +2,9 @@
 
 ## Current phase
 
-Phase 9 — README & polish (next); GPU runs pending for Phases 3–7
+All phases implemented and smoke-tested on CPU. **Blocked on compute/data access, not on
+code:** every real-model step (B0–B3, M1, M2, test evaluation, error analysis on real
+predictions, Hub upload) needs a GPU machine with huggingface.co access.
 
 ## Environment facts (session 1, 2026-10-22)
 
@@ -84,9 +86,23 @@ Phase 9 — README & polish (next); GPU runs pending for Phases 3–7
   - Not run here: the vLLM container (needs GPU), HF upload (no token), llama.cpp recipe.
 - `make smoke`: whole pipeline with real CLI scripts in 81 s on CPU.
 
-## Next
+- **Phase 9** — README as a technical report (method formulas, protocol, honest status,
+  reproduction, verification summary, limitations, licences); `.python-version` = 3.12; CI
+  workflow (`.github/workflows/receipt-vlm.yml`: `make check` + `make smoke`).
+  - **DoD check run here:** fresh clone of the pushed branch → `make setup && make smoke` →
+    exit 0 (setup ≈ 2.5 min, smoke 91 s). README contains no numbers that are not in
+    RESULTS.md (there are none yet).
+  - Gradio UI checked in a headless browser (mocked model): summary, items table, JSON and the
+    6 examples render, Arabic correctly.
 
-- Phase 9: README as a short technical report; reproducibility commands; licences.
+## Next (on a GPU machine — see "Must run" below)
+
+1. `make data && make synth`, commit the extended manifests; check `dropped_ids` for false
+   near-duplicates and run `uv run pytest -m data` (first real test of the CORD converter).
+2. Baselines on val → SFT (+ projector ablation) → GRPO → test once → `make report` →
+   `scripts/error_analysis.py` → write the RQ1–RQ4 paragraphs in RESULTS.md and the README
+   results section from the generated tables only.
+3. `make merge` / `make merge-m2`, `make serve` (vLLM), `scripts/push_to_hub.py`.
 
 ## Known issues
 
