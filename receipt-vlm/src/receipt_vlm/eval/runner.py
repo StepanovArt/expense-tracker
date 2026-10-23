@@ -106,6 +106,15 @@ def score_predictions(
     ]
 
 
+def device_name() -> str:
+    """The accelerator predictions run on; latency is only comparable on the same one."""
+    try:
+        import torch
+    except ImportError:
+        return "cpu"
+    return str(torch.cuda.get_device_name(0)) if torch.cuda.is_available() else "cpu"
+
+
 def evaluate_model(
     model_id: str,
     spec: dict[str, Any],
@@ -126,6 +135,7 @@ def evaluate_model(
         "max_new_tokens": gen_cfg.get("max_new_tokens"),
         "max_pixels": cap.max_pixels,
         "backend": spec.get("backend", "hf"),
+        "device": device_name(),
     }
     need = not out.exists() or len(
         {r["id"] for r in read_jsonl(out)} & {s["id"] for s in samples}

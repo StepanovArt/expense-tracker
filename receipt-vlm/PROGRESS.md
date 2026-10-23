@@ -116,6 +116,7 @@ predictions, Hub upload) needs a GPU machine with huggingface.co access.
 
 ```bash
 make setup-gpu
+make gpu-check      # must print the GPU name; torch is built for CUDA 13 (driver >= 580)
 make data            # adds CORD + WildReceipt; SROIE test entries stay frozen
 make synth           # re-merge synthetic: the 50 % cap now admits more synthetic train
 uv run pytest -m data

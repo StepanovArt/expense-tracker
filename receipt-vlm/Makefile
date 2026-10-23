@@ -8,7 +8,7 @@ MODEL   ?= M1
 EVALCFG ?= configs/eval/final.yaml
 EXTRAS  ?= --extra ml --extra ocr --extra serve --extra hub
 
-.PHONY: help setup setup-gpu data synth eval-baselines sft grpo eval report merge merge-m2 serve api demo smoke \
+.PHONY: help setup setup-gpu data synth eval-baselines sft grpo eval report merge merge-m2 gpu-check serve api demo smoke \
         lint format typecheck test test-all check docker clean-smoke
 
 help:  ## list targets
@@ -48,6 +48,9 @@ merge:  ## merge the SFT adapter (M1) into the base weights -> outputs/merged
 
 merge-m2:  ## M2: GRPO adapter on top of the merged SFT model -> outputs/merged
 	$(PY) scripts/merge_lora.py --base outputs/sft/merged --adapter outputs/grpo/best --out outputs/merged
+
+gpu-check:  ## fail unless PyTorch sees a CUDA GPU (run right after setup-gpu)
+	$(PY) -c "import torch; ok = torch.cuda.is_available(); print('torch', torch.__version__, '| built for CUDA', torch.version.cuda, '|', torch.cuda.get_device_name(0) if ok else 'NO GPU VISIBLE: driver too old for this CUDA, or no GPU attached'); raise SystemExit(0 if ok else 1)"
 
 serve:  ## vLLM OpenAI server on the merged model + FastAPI /extract (needs GPU)
 	bash scripts/serve.sh
