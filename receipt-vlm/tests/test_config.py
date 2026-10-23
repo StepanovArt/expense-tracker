@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from receipt_vlm.utils.config import apply_overrides, deep_merge, load_config
+from receipt_vlm.utils.config import apply_overrides, deep_merge, load_config, require_cuda
 from receipt_vlm.utils.seed import derive_seed, seed_everything
 
 
@@ -50,3 +50,14 @@ def test_seeds_are_stable() -> None:
     assert a == (random.random(), float(np.random.rand()))
     assert derive_seed(1, "sroie", "en") == derive_seed(1, "sroie", "en")
     assert derive_seed(1, "sroie", "en") != derive_seed(1, "cord", "en")
+
+
+def test_gpu_configs_refuse_to_run_without_cuda() -> None:
+    configs = Path(__file__).parents[1] / "configs"
+    for name in ("sft/gpu16.yaml", "sft/gpu24plus.yaml", "grpo/gpu16.yaml"):
+        cfg = load_config(configs / name)
+        with pytest.raises(RuntimeError, match="needs a CUDA GPU"):
+            require_cuda(cfg, cuda_available=False)
+        require_cuda(cfg, cuda_available=True)
+    for name in ("sft/smoke.yaml", "grpo/smoke.yaml"):  # CPU smoke runs stay allowed
+        require_cuda(load_config(configs / name), cuda_available=False)

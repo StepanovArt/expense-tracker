@@ -1,6 +1,7 @@
 # Single 16 GB GPU: bf16/fp16 2B policy (merged SFT) + LoRA, group of 4, shorter completions.
 _base_: base.yaml
 run_name: grpo-gpu16
+require_cuda: true             # fail fast instead of training on the CPU
 grpo:
   num_generations: 4
   max_completion_length: 640

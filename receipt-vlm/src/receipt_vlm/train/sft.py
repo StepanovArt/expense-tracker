@@ -19,6 +19,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from receipt_vlm.utils.config import require_cuda
 from receipt_vlm.utils.io import read_jsonl, resolve, write_json
 from receipt_vlm.utils.logging import MetricsLogger, get_logger
 
@@ -272,6 +273,7 @@ def train_sft(cfg: dict[str, Any]) -> Path:
     from receipt_vlm.eval.runner import load_split, select_subset
     from receipt_vlm.utils.seed import seed_everything
 
+    require_cuda(cfg)
     seed = int(cfg["seed"])
     seed_everything(seed)
     out_dir = resolve(cfg["output_dir"])
@@ -308,6 +310,7 @@ def train_sft(cfg: dict[str, Any]) -> Path:
         weight_decay=float(t.get("weight_decay", 0.0)),
         max_grad_norm=float(t.get("max_grad_norm", 1.0)),
         logging_steps=int(t.get("logging_steps", 10)),
+        logging_first_step=True,  # loss, grad_norm and speed show up after one step
         save_strategy="no",  # our callback saves adapters selected by val F1
         eval_strategy="no",
         bf16=bf16,

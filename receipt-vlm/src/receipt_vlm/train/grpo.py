@@ -21,6 +21,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from receipt_vlm.utils.config import require_cuda
 from receipt_vlm.utils.io import read_jsonl, resolve, write_json
 from receipt_vlm.utils.logging import MetricsLogger, get_logger
 
@@ -190,6 +191,7 @@ def train_grpo(cfg: dict[str, Any]) -> Path:
     from receipt_vlm.train.trl_compat import install_cpu_logprob_fallback
     from receipt_vlm.utils.seed import seed_everything
 
+    require_cuda(cfg)
     seed = int(cfg["seed"])
     seed_everything(seed)
     install_cpu_logprob_fallback()  # no-op on GPU

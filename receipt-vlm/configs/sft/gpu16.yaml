@@ -1,6 +1,7 @@
 # Single 16 GB GPU (Colab T4/L4, Kaggle P100/T4): QLoRA 4-bit, batch 1 x accum 16.
 _base_: base.yaml
 run_name: sft-gpu16
+require_cuda: true             # fail fast instead of training on the CPU
 model:
   load_in_4bit: true
 train:

@@ -90,3 +90,22 @@ def load_config(path: str | Path, overrides: Iterable[str] = ()) -> dict[str, An
     cfg = apply_overrides(cfg, overrides)
     cfg.setdefault("_meta", {})["config_path"] = str(path)
     return cfg
+
+
+def require_cuda(cfg: dict[str, Any], cuda_available: bool | None = None) -> None:
+    """Fail fast when a config marked ``require_cuda: true`` runs without a CUDA device.
+
+    The GPU configs (``*/gpu16.yaml``, ``*/gpu24plus.yaml``) would otherwise fall back to the
+    CPU silently and run for days, which is what a Colab runtime without a GPU looks like.
+    """
+    if not cfg.get("require_cuda"):
+        return
+    if cuda_available is None:
+        import torch
+
+        cuda_available = bool(torch.cuda.is_available())
+    if not cuda_available:
+        raise RuntimeError(
+            f"{cfg.get('run_name', 'this config')} needs a CUDA GPU, but none is visible "
+            "(check `nvidia-smi`; on Colab: Runtime -> Change runtime type -> T4 GPU)"
+        )

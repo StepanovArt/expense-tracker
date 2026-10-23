@@ -1,6 +1,7 @@
 # >= 24 GB GPU (L4-24, A10, 3090/4090, A100): bf16 LoRA, larger images and batch.
 _base_: base.yaml
 run_name: sft-gpu24plus
+require_cuda: true             # fail fast instead of training on the CPU
 model:
   attn_implementation: sdpa
 image:
