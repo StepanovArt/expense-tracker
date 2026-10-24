@@ -2,9 +2,32 @@
 
 ## Current phase
 
-All phases implemented and smoke-tested on CPU. **Blocked on compute/data access, not on
-code:** every real-model step (B0–B3, M1, M2, test evaluation, error analysis on real
-predictions, Hub upload) needs a GPU machine with huggingface.co access.
+Validation complete on a GPU (session 2, see below); the single test run (all six models +
+RQ4 error analysis) is in progress. Remaining after it: RQ1–RQ4 paragraphs from the test
+tables, `make merge` / serving through vLLM, Hub upload, wiring `/extract` into the bot.
+
+## GPU run (session 2, 2026-10-23/24)
+
+- Colab (free T4) was abandoned: the GPU quota ran out mid-run, and SFT silently trained on
+  the CPU. `torch 2.13.0+cu130` needs an NVIDIA driver >= 580; on an older driver
+  `torch.cuda.is_available()` is False. Added `make gpu-check`, `require_cuda: true` in the GPU
+  configs and the device in every prediction file (DECISIONS #45). Colab's WildReceipt build
+  was also incomplete (92 instead of 141 val receipts), so its B0 predictions were discarded.
+- RunPod, 1x RTX 4090 24 GB (driver with CUDA 13.2), `gpu16` configs (DECISIONS #43).
+- Data: all four sources built, 6,324 samples (train 4,788 / val 602 / test 934); dedup
+  dropped 35 (15 near-duplicates of test, 13 of val, 7 exact); `pytest -m data` passed, i.e. the
+  CORD converter now ran over the real records. The frozen SROIE + synthetic test entries were
+  reproduced exactly; the CORD / WildReceipt test entries are appended and committed.
+- Val (n = 602), strict micro-F1 [95 % CI]: B0 17.7 [14.9, 20.3], B1 29.9 [26.2, 33.3],
+  B2 60.8 [57.4, 63.9], B3 78.1 [76.0, 80.0], M1 92.4 [91.1, 93.4], M2 94.6 [93.5, 95.6];
+  p50 latency M1 3.57 s vs B3 8.11 s. Full tables: `reports/RESULTS.md`.
+- GRPO checks: the hacking monitor flagged step 240 (null rate +5.6 pts while reward rose by
+  0.007), but precision and recall both rose from M1 to M2 (92.8 / 92.0 -> 94.6 / 94.7), so the
+  extra nulls replaced hallucinated values. Invalid outputs fell from 22 to 3; on the 580 val
+  receipts where both outputs are valid, F1 goes 93.1 -> 94.9. The best GRPO step was the last
+  one (300), so GRPO had not plateaued.
+- Not done: the projector ablation (`lora.train_projector=true`); a check of
+  `build_info.json["dropped_ids"]` for false near-duplicates among CORD / WildReceipt.
 
 ## Environment facts (session 1, 2026-10-22)
 
@@ -97,18 +120,14 @@ predictions, Hub upload) needs a GPU machine with huggingface.co access.
 
 ## Next (on a GPU machine — see "Must run" below)
 
-1. `make data && make synth`, commit the extended manifests; check `dropped_ids` for false
-   near-duplicates and run `uv run pytest -m data` (first real test of the CORD converter).
-2. Baselines on val → SFT (+ projector ablation) → GRPO → test once → `make report` →
-   `scripts/error_analysis.py` → write the RQ1–RQ4 paragraphs in RESULTS.md and the README
-   results section from the generated tables only.
-3. `make merge` / `make merge-m2`, `make serve` (vLLM), `scripts/push_to_hub.py`.
+1. Finish the test run (in progress) → `make report` → `scripts/error_analysis.py --model M2`
+   → write the RQ1–RQ4 paragraphs in RESULTS.md and the README results section from the
+   generated tables only.
+2. `make merge-m2` (M2 is the best model on val), `make serve` (vLLM), measure vLLM latency,
+   `scripts/push_to_hub.py`.
 
 ## Known issues
 
-- CORD converter is tested on structure-faithful fixtures, not verbatim records (HF blocked).
-  First thing on the GPU machine: `make data && uv run pytest -m data` (runs the converter over
-  all 1,000 real CORD records) and inspect `reports/data_stats.md`.
 - pHash threshold (≤ 6 of 256 bits) was calibrated on SROIE only; after adding CORD/WildReceipt,
   check `data/processed/build_info.json["dropped_ids"]` for false near-duplicates.
 
