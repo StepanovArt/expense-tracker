@@ -2,9 +2,13 @@
 
 ## Current phase
 
-Validation complete on a GPU (session 2, see below); the single test run (all six models +
-RQ4 error analysis) is in progress. Remaining after it: RQ1–RQ4 paragraphs from the test
-tables, `make merge` / serving through vLLM, Hub upload, wiring `/extract` into the bot.
+Validation complete on a GPU (session 2, see below). The test evaluation was run on the server
+(whether it completed was never checked), but the GPU server was deleted before its archive was
+downloaded, so there are no test predictions;
+the project stops at validation for now. Remaining, all optional: re-run the test evaluation
+(about 12 GPU hours, no retraining: the SFT and GRPO adapters are kept outside the repo in
+`results_val.tgz`), RQ1–RQ4 paragraphs, `make merge-m2` / serving through vLLM, Hub upload,
+wiring `/extract` into the bot.
 
 ## GPU run (session 2, 2026-10-23/24)
 
@@ -120,9 +124,11 @@ tables, `make merge` / serving through vLLM, Hub upload, wiring `/extract` into 
 
 ## Next (on a GPU machine — see "Must run" below)
 
-1. Finish the test run (in progress) → `make report` → `scripts/error_analysis.py --model M2`
-   → write the RQ1–RQ4 paragraphs in RESULTS.md and the README results section from the
-   generated tables only.
+1. Optional test re-run: new GPU server → `make setup-gpu && make data && make synth` (the
+   committed manifests make the build fail if the test set differs) → extract
+   `results_val.tgz` → `uv run python scripts/merge_lora.py --adapter outputs/sft/best --out
+   outputs/sft/merged` → the test command below → **download the archive before deleting the
+   server** → `make report` → `scripts/error_analysis.py --model M2` → RQ1–RQ4 paragraphs.
 2. `make merge-m2` (M2 is the best model on val), `make serve` (vLLM), measure vLLM latency,
    `scripts/push_to_hub.py`.
 
