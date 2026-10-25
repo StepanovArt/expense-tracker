@@ -12,13 +12,27 @@ models:
     backend: hf
     model: outputs/sft/merged      # SFT adapter merged into the base by train_grpo
     adapter: outputs/grpo/best     # GRPO LoRA on top of the merged SFT model
+  M3:                              # ablation: RL alone (DECISIONS #46)
+    desc: Qwen3-VL-2B + GRPO only, no SFT (ablation)
+    backend: hf
+    model: Qwen/Qwen3-VL-2B-Instruct
+    adapter: outputs/grpo_base/best
+  C1:                              # control: more SFT instead of GRPO (DECISIONS #46)
+    desc: M1 + more SFT on GRPO's data, no RL (control)
+    backend: hf
+    model: outputs/sft/merged
+    adapter: outputs/sft_control/best
 report:
   splits: [val, test]
-  ours: [M1, M2]
-  order: [B0, B1, B2, B3, M1, M2]
+  ours: [M1, M2, M3, C1]
+  order: [B0, B1, B2, B3, M1, M2, M3, C1]
   comparisons:            # A vs B, paired on the same images
     - [M1, B1]   # RQ1
     - [M2, M1]   # RQ2
     - [M1, B2]   # RQ3
     - [M1, B3]   # RQ3
     - [M1, B0]   # RQ3
+    - [M3, B1]   # RQ2 ablation: RL alone
+    - [M3, M1]   # RQ2 ablation: RL alone vs SFT alone
+    - [M2, C1]   # RQ2 control: same start and data, reward vs gold tokens
+    - [C1, M1]   # RQ2 control: does more SFT help at all

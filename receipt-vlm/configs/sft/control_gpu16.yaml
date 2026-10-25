@@ -1,0 +1,16 @@
+# Control for RQ2 (DECISIONS #46): more SFT instead of GRPO. Same start as M2's GRPO run
+# (the merged M1 model + a fresh LoRA, bf16), same 1,500-receipt train subset, same number of
+# receipts (GRPO: 300 steps x 4 prompts = 1,200; here 75 steps x 16). Only the signal differs:
+# gold tokens instead of a reward. M2 vs C1 = RL vs more SFT; C1 vs M1 = does more SFT help.
+_base_: gpu16.yaml
+run_name: sft-control
+output_dir: outputs/sft_control
+model:
+  name: outputs/sft/merged       # scripts/merge_lora.py --adapter outputs/sft/best
+  load_in_4bit: false            # bf16 like the GRPO policy
+data:
+  max_train_samples: 1500        # = grpo data.max_train_samples, same seed -> same subset
+train:
+  max_steps: 75
+eval:
+  every_steps: 15                # 5 checkpoints, selected by val F1 like every run

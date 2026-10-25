@@ -124,6 +124,11 @@ wiring `/extract` into the bot.
 
 ## Next (on a GPU machine — see "Must run" below)
 
+0. RQ2 ablation (DECISIONS #46), val only: upload `results_val.tgz` to `/workspace` of a new
+   RTX 4090 pod, then `make ablation` (in tmux). It restores the val run, rebuilds the data
+   (stops if it differs from the committed manifests), trains C1 (more SFT) and M3 (GRPO
+   without SFT), evaluates both on val, regenerates RESULTS.md and packs everything into
+   `/workspace/ablation_results.tgz`, printing the val table to the terminal after each model.
 1. Optional test re-run: new GPU server → `make setup-gpu && make data && make synth` (the
    committed manifests make the build fail if the test set differs) → extract
    `results_val.tgz` → `uv run python scripts/merge_lora.py --adapter outputs/sft/best --out

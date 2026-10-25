@@ -110,6 +110,27 @@ def test_tiny_sft_memorises_then_grpo_updates(tmp_path: Path) -> None:
 
 
 @pytest.mark.slow
+def test_grpo_without_sft_adapter_starts_from_the_base_model(tmp_path: Path) -> None:
+    torch = pytest.importorskip("torch")
+    from transformers import AutoModelForImageTextToText
+
+    from receipt_vlm.models.tiny import build_tiny_qwen3_vl
+    from receipt_vlm.train.grpo import build_policy
+
+    model_dir = build_tiny_qwen3_vl(tmp_path / "tiny")
+    cfg = load_config(
+        ROOT / "configs" / "grpo" / "smoke.yaml",
+        [f"model.name={model_dir}", "model.sft_adapter=null", "model.merged_sft_dir=null"],
+    )
+    model, _ = build_policy(cfg)
+    base = AutoModelForImageTextToText.from_pretrained(model_dir)
+    got, ref = dict(model.named_parameters()), dict(base.named_parameters())
+    assert got.keys() == ref.keys()
+    assert all(torch.equal(got[k], ref[k]) for k in ref)
+    assert sorted(p.name for p in tmp_path.iterdir()) == ["tiny"]  # no merged copy written
+
+
+@pytest.mark.slow
 @pytest.mark.parametrize("train_projector", [False, True])
 def test_lora_targets_language_model_only(tmp_path: Path, train_projector: bool) -> None:
     pytest.importorskip("torch")

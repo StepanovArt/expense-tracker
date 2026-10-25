@@ -29,22 +29,27 @@ log = get_logger(__name__)
 
 
 def build_policy(cfg: dict[str, Any]) -> tuple[Any, Any]:
-    """(merged SFT model, processor)."""
+    """(merged SFT model, processor); the base model when ``model.sft_adapter`` is null
+    (GRPO without SFT, the RL-only ablation: KL is then measured to the base model)."""
     from receipt_vlm.models.load import ImageCap, load_processor, load_vlm
 
     mcfg = cfg["model"]
     cap = ImageCap(**cfg["image"])
+    if not mcfg.get("sft_adapter"):
+        log.info("no SFT adapter: GRPO starts from the base model %s", mcfg["name"])
+        return load_vlm(mcfg["name"], None, False, mcfg.get("dtype", "auto")), load_processor(
+            mcfg["name"], cap
+        )
     merged_dir = resolve(mcfg["merged_sft_dir"])
     if (merged_dir / "config.json").exists():
         log.info("using merged SFT model %s", merged_dir)
         return load_vlm(str(merged_dir), None, False, mcfg.get("dtype", "auto")), load_processor(
             str(merged_dir), cap
         )
-    base = load_vlm(mcfg["name"], mcfg.get("sft_adapter"), False, mcfg.get("dtype", "auto"))
-    if mcfg.get("sft_adapter"):
-        base = base.merge_and_unload()
-        log.info("merged SFT adapter %s into %s", mcfg["sft_adapter"], mcfg["name"])
-    processor = load_processor(mcfg.get("sft_adapter") or mcfg["name"], cap)
+    base = load_vlm(mcfg["name"], mcfg["sft_adapter"], False, mcfg.get("dtype", "auto"))
+    base = base.merge_and_unload()
+    log.info("merged SFT adapter %s into %s", mcfg["sft_adapter"], mcfg["name"])
+    processor = load_processor(mcfg["sft_adapter"], cap)
     merged_dir.mkdir(parents=True, exist_ok=True)
     base.save_pretrained(merged_dir)
     processor.save_pretrained(merged_dir)

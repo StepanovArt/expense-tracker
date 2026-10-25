@@ -7,8 +7,10 @@ CONFIG  ?= configs/sft/gpu16.yaml
 MODEL   ?= M1
 EVALCFG ?= configs/eval/final.yaml
 EXTRAS  ?= --extra ml --extra ocr --extra serve --extra hub
+ARCHIVE ?= /workspace/results_val.tgz
+PACK    ?= /workspace/ablation_results.tgz
 
-.PHONY: help setup setup-gpu data synth eval-baselines sft grpo eval report merge merge-m2 gpu-check serve api demo smoke \
+.PHONY: help setup setup-gpu data synth eval-baselines sft grpo eval report merge merge-m2 gpu-check ablation serve api demo smoke \
         lint format typecheck test test-all check docker clean-smoke
 
 help:  ## list targets
@@ -51,6 +53,23 @@ merge-m2:  ## M2: GRPO adapter on top of the merged SFT model -> outputs/merged
 
 gpu-check:  ## fail unless PyTorch sees a CUDA GPU (run right after setup-gpu)
 	$(PY) -c "import torch; ok = torch.cuda.is_available(); print('torch', torch.__version__, '| built for CUDA', torch.version.cuda, '|', torch.cuda.get_device_name(0) if ok else 'NO GPU VISIBLE: driver too old for this CUDA, or no GPU attached'); raise SystemExit(0 if ok else 1)"
+
+ablation:  ## RQ2 ablation on val: C1 (more SFT) + M3 (GRPO without SFT); needs ARCHIVE from the val run
+	$(MAKE) setup-gpu
+	$(PY) scripts/restore_outputs.py --archive $(ARCHIVE)
+	$(MAKE) gpu-check
+	$(MAKE) data
+	$(MAKE) synth
+	@git diff --quiet -- data/splits || { git diff --stat -- data/splits; echo "rebuilt data differs from the committed manifests: stopping"; exit 1; }
+	$(PY) scripts/merge_lora.py --adapter outputs/sft/best --out outputs/sft/merged
+	$(PY) scripts/train_sft.py --config configs/sft/control_gpu16.yaml
+	$(MAKE) eval MODEL=C1 SPLIT=val
+	$(MAKE) report
+	bash scripts/pack_ablation.sh $(PACK)
+	$(PY) scripts/train_grpo.py --config configs/grpo/from_base_gpu16.yaml
+	$(MAKE) eval MODEL=M3 SPLIT=val
+	$(MAKE) report
+	bash scripts/pack_ablation.sh $(PACK)
 
 serve:  ## vLLM OpenAI server on the merged model + FastAPI /extract (needs GPU)
 	bash scripts/serve.sh

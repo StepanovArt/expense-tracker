@@ -1,0 +1,9 @@
+# RL-only ablation (DECISIONS #46): the M2 GRPO run, but from the base model without SFT.
+# Everything else (train subset, steps, group size, reward, KL beta, lr) is identical, so
+# M3 vs B1 is the effect of RL alone and M3 vs M1 compares RL alone with SFT alone.
+_base_: gpu16.yaml
+run_name: grpo-from-base
+output_dir: outputs/grpo_base
+model:
+  sft_adapter: null              # start from Qwen3-VL-2B-Instruct; KL is measured to it
+  merged_sft_dir: null
